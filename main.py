@@ -435,7 +435,7 @@ class GameControllerRecorder:
         self.stop_btn.grid(row=0, column=3, padx=3, pady=3, sticky="ew")
         
         # 停止按钮提示
-        stop_tip = tk.Label(button_frame, text="停止", 
+        stop_tip = tk.Label(button_frame, text="停止\nShift+F12", 
                            font=("微软雅黑", 7, "bold"), fg="#FFB74D", bg="#1A1A2E")
         stop_tip.grid(row=1, column=3, pady=(2, 0))
         
@@ -596,10 +596,12 @@ class GameControllerRecorder:
             # 注册全局热键
             kb.add_hotkey('shift+f9', self.hotkey_start_recording, suppress=True)
             kb.add_hotkey('shift+f10', self.hotkey_play_latest, suppress=True)
+            kb.add_hotkey('shift+f12', self.hotkey_stop_operations, suppress=True)
             
-            print("全局热键已注册: Shift+F9-F10")  # 调试信息
+            print("全局热键已注册: Shift+F9-F10, Shift+F12")  # 调试信息
             print("Shift+F9: 开始录制")  # 调试信息
             print("Shift+F10: 循环最近一次")  # 调试信息
+            print("Shift+F12: 停止所有操作")  # 调试信息
             
         except ImportError:
             print("keyboard库不可用，使用pynput热键")  # 调试信息
@@ -614,7 +616,7 @@ class GameControllerRecorder:
                         print("Shift键按下")  # 调试信息
                         return
                     
-                    # 检测F9-F10键
+                    # 检测F9-F10-F12键
                     if self.shift_pressed:
                         print(f"检测到组合键: {key}")  # 调试信息
                         if key == keyboard.Key.f9:
@@ -623,6 +625,9 @@ class GameControllerRecorder:
                         elif key == keyboard.Key.f10:
                             print("触发Shift+F10 - 循环最近一次")  # 调试信息
                             self.root.after(0, self.play_latest_recording)
+                        elif key == keyboard.Key.f12:
+                            print("触发Shift+F12 - 停止所有操作")  # 调试信息
+                            self.root.after(0, self.stop_operations)
                 except AttributeError as e:
                     print(f"热键处理错误: {e}")  # 调试信息
                     pass
