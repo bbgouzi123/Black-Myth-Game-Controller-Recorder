@@ -1,0 +1,6 @@
+pygame
+pynput
+tkinter-tooltip
+keyboard
+mouse
+pywin32

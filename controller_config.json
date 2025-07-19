@@ -1,0 +1,47 @@
+{
+  "controller_name": "北通BTP-A2P3A",
+  "button_mapping": {
+    "0": {"name": "A按钮", "key": "SPACE", "description": "跳跃"},
+    "1": {"name": "B按钮", "key": "CTRL", "description": "翻滚/闪身"},
+    "2": {"name": "X按钮", "key": "MOUSE_LEFT", "description": "轻攻击"},
+    "3": {"name": "Y按钮", "key": "MOUSE_RIGHT", "description": "重攻击"},
+    "4": {"name": "LB按钮", "key": "R", "description": "饮酒"},
+    "5": {"name": "RB按钮", "key": "SHIFT", "description": "疾奔"},
+    "6": {"name": "BACK按钮", "key": "ESC", "description": "菜单"},
+    "7": {"name": "START按钮", "key": "P", "description": "照相模式"},
+    "8": {"name": "左摇杆按下", "key": "MOUSE_WHEEL", "description": "锁定/取消锁定"},
+    "9": {"name": "右摇杆按下", "key": "E", "description": "场景互动"}
+  },
+  "axis_mapping": {
+    "0": {"name": "左摇杆X轴", "key": "WASD_X", "description": "左右移动 (A/D)"},
+    "1": {"name": "左摇杆Y轴", "key": "WASD_Y", "description": "前后移动 (W/S)"},
+    "2": {"name": "右摇杆X轴", "key": "MOUSE_X", "description": "视角左右"},
+    "3": {"name": "右摇杆Y轴", "key": "MOUSE_Y", "description": "视角上下"},
+    "4": {"name": "左触发器", "key": "V", "description": "棍花展示"},
+    "5": {"name": "右触发器", "key": "RT_COMBO", "description": "法术释放"}
+  },
+  "hat_mapping": {
+    "0": {"name": "方向键", "key": "DPAD_SPELLS", "description": "法术选择 (1,2,3,4)"}
+  },
+  "keyboard_mapping": {
+    "W": "前进",
+    "A": "左移", 
+    "S": "后退",
+    "D": "右移",
+    "SPACE": "跳跃",
+    "SHIFT": "疾奔",
+    "CTRL": "翻滚/闪身",
+    "Q": "取用随身之物",
+    "E": "场景互动",
+    "R": "饮酒",
+    "V": "棍花展示",
+    "C": "戳棍法",
+    "X": "立棍法", 
+    "Z": "劈棍法",
+    "P": "照相模式",
+    "1": "法术1",
+    "2": "法术2",
+    "3": "法术3",
+    "4": "法术4"
+  }
+} 
