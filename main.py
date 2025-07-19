@@ -15,69 +15,61 @@ import win32con
 
 class GameControllerRecorder:
     def __init__(self):
+        """初始化应用"""
         self.root = tk.Tk()
-        self.root.title("🎮 黑神话游戏手柄录制器")
-        self.root.geometry("300x300")
+        self.root.title("黑神话手柄录制器")
+        self.root.geometry("400x600")
         self.root.resizable(False, False)
-        self.root.configure(bg="#F5F5F5")  # 设置主窗口背景色
         
-        # 设置窗口图标（使用Unicode字符作为图标）
-        try:
-            self.root.iconbitmap("icon.ico")  # 如果有图标文件的话
-        except:
-            pass  # 如果没有图标文件，使用默认图标
-        
-        # 设置窗口置顶和透明毛玻璃效果
-        self.root.attributes('-topmost', True)
-        self.root.attributes('-alpha', 0.9)  # 设置透明度
-        self.root.configure(bg='#f0f0f0')  # 设置背景色
-        
-        # 设置窗口位置在右下角
+        # 设置窗口位置
         self.set_window_position()
         
-        # 创建recordings文件夹
+        # 初始化变量
+        self.is_recording = False  # 录制状态
+        self.is_playing = False    # 播放状态
+        self.force_stop = False    # 强制停止标志
+        self.recording_data = []   # 录制数据
+        self.current_recording_file = ""  # 当前录制文件名
+        self.recording_start_time = 0  # 录制开始时间
+        
+        # 手柄相关
+        self.joysticks = []  # 手柄列表
+        self.current_joystick_data = {}  # 当前手柄数据
+        
+        # 移动控制线程
+        self.movement_running = False
+        self.movement_thread = None
+        self.movement_lock = threading.Lock()
+        self.target_keys = set()  # 目标按键集合
+        self.pressed_keys = set()  # 当前按下的按键
+        
+        # 虚拟手柄
+        self.vjoy_available = False
+        self.vjoy = None
+        
+        # 热键监听器
+        self.keyboard_listener = None
+        
+        # 创建录制文件夹
         self.recordings_dir = "recordings"
         if not os.path.exists(self.recordings_dir):
             os.makedirs(self.recordings_dir)
         
-        # 初始化pygame用于手柄支持
-        pygame.init()
-        pygame.joystick.init()
-        
-        # 状态变量
-        self.is_recording = False
-        self.is_playing = False
-        self.recording_data = []
-        self.recording_start_time = None
-        self.current_recording_file = None
-        self.keyboard_listener = None
-        self.mouse_listener = None
-        
-        # 手柄相关
-        self.joysticks = []
-        self.current_joystick_data = {}  # 当前手柄数据
-        self.init_joysticks()
-        
-        # 虚拟手柄相关
-        self.vjoy_available = False
-        self.init_virtual_joystick()
-        
-        # 加载手柄配置
+        # 加载控制器配置
         self.controller_config = self.load_controller_config()
         
-        # 添加持续按键状态管理 - 用于流畅的摇杆移动
-        self.pressed_keys = set()  # 当前按下的按键集合
-        self.last_joystick_state = {}  # 上一次摇杆状态，用于检测变化
+        # 初始化手柄
+        self.init_joysticks()
         
-        # 添加移动控制线程相关变量
-        self.movement_thread = None  # 移动控制线程
-        self.movement_running = False  # 移动线程运行标志
-        self.target_keys = set()  # 目标按键集合（线程安全）
-        self.movement_lock = threading.Lock()  # 线程锁
+        # 初始化虚拟手柄
+        self.init_virtual_joystick()
         
+        # 设置UI
         self.setup_ui()
-        self.setup_global_hotkeys()
         
+        # 设置全局热键
+        self.setup_global_hotkeys()
+    
     def set_window_position(self):
         """设置窗口位置在屏幕右下角"""
         try:
@@ -546,7 +538,8 @@ class GameControllerRecorder:
         print("🔥 热键触发：停止所有操作")  # 调试信息
         print(f"当前状态 - 录制: {self.is_recording}, 播放: {self.is_playing}")  # 调试信息
         
-        # 立即设置停止标志
+        # 设置强制停止标志
+        self.force_stop = True
         self.is_recording = False
         self.is_playing = False
         
@@ -558,7 +551,7 @@ class GameControllerRecorder:
         
         # 使用after方法确保在主线程中执行
         self.root.after(0, self.stop_operations)
-        print("停止信号已发送，强制清理完成")  # 调试信息
+        print("强制停止信号已发送，强制清理完成")  # 调试信息
     
     def update_joystick_status(self):
         """更新手柄状态显示"""
@@ -915,13 +908,13 @@ class GameControllerRecorder:
         
         try:
             print(f"开始播放，数据条数: {len(recording_data)}")  # 调试信息
-            while self.is_playing:  # 循环播放
+            while self.is_playing and not self.force_stop:  # 循环播放，检查强制停止
                 start_time = time.time()
                 data_count = 0  # 调试计数器
                 
                 for data in recording_data:
-                    # 每10条数据检查一次停止状态
-                    if data_count % 10 == 0 and not self.is_playing:
+                    # 每5条数据检查一次停止状态
+                    if data_count % 5 == 0 and (not self.is_playing or self.force_stop):
                         print("检测到停止信号，退出播放循环")  # 调试信息
                         break
                     
@@ -934,23 +927,24 @@ class GameControllerRecorder:
                     current_time = time.time() - start_time
                     
                     # 将等待时间分成更小的片段，每0.001秒检查一次停止状态
-                    while current_time < target_time and self.is_playing:
+                    while current_time < target_time and self.is_playing and not self.force_stop:
                         time.sleep(0.001)  # 减少到0.001秒
                         current_time = time.time() - start_time
                     
-                    if not self.is_playing:
+                    if not self.is_playing or self.force_stop:
                         print("检测到停止信号，退出数据循环")  # 调试信息
                         break
                     
                     # 发送手柄数据到游戏
                     self.send_joystick_data(data)
                 
-                # 如果还在播放状态，继续下一轮循环
-                if self.is_playing:
+                # 如果还在播放状态且没有强制停止，继续下一轮循环
+                if self.is_playing and not self.force_stop:
                     print("播放完成，开始循环播放...")  # 调试信息
                     self.log_message("播放完成，开始循环播放...")
                 else:
                     print("播放已停止，退出循环")  # 调试信息
+                    break
             
             # 播放结束
             self.stop_playback()
@@ -1034,7 +1028,7 @@ class GameControllerRecorder:
                     key = button_mapping[i]
                     
                     # 检查是否应该停止
-                    if not self.is_playing:
+                    if not self.is_playing or self.force_stop:
                         break
                     
                     # A按钮 - 跳跃 (空格键)
@@ -1097,7 +1091,7 @@ class GameControllerRecorder:
                         win32api.keybd_event(ord('E'), 0, win32con.KEYEVENTF_KEYUP, 0)
             
             # 检查是否应该停止
-            if not self.is_playing:
+            if not self.is_playing or self.force_stop:
                 return
             
             # 处理左摇杆移动 (WASD控制) - 使用线程机制实现流畅移动
@@ -1153,13 +1147,14 @@ class GameControllerRecorder:
     def non_blocking_sleep(self, duration):
         """非阻塞的睡眠，能够响应停止信号"""
         start_time = time.time()
-        while time.time() - start_time < duration and self.is_playing:
+        while time.time() - start_time < duration and self.is_playing and not self.force_stop:
             time.sleep(0.001)  # 每1毫秒检查一次停止状态
     
     def stop_playback(self):
         """停止播放"""
         print("🛑 停止播放")  # 调试信息
         self.is_playing = False
+        self.force_stop = False # 确保强制停止标志被重置
         self.status_label.config(text="⏳ 等待操作...")
         
         # 恢复所有按钮状态到正常
@@ -1194,6 +1189,9 @@ class GameControllerRecorder:
         # 释放所有当前按下的按键，避免按键卡住
         print("释放所有按键...")  # 调试信息
         self.release_all_keys()
+        
+        # 重置强制停止标志
+        self.force_stop = False
         
         # 恢复所有按钮状态到正常
         print("恢复按钮状态...")  # 调试信息
