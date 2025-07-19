@@ -119,28 +119,15 @@ class GameControllerRecorder:
             
             # 强力激活窗口
             try:
-                # 方法1: 使用AttachThreadInput强制激活
-                current_thread = win32api.GetCurrentThreadId()
-                target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
-                
-                if current_thread != target_thread:
-                    # 附加到目标线程
-                    win32gui.AttachThreadInput(current_thread, target_thread, True)
-                
-                # 方法2: 使用多种激活方式
-                # 显示窗口
+                # 方法1: 显示窗口
                 win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 
-                # 设置前台窗口
+                # 方法2: 设置前台窗口
                 win32gui.SetForegroundWindow(hwnd)
                 
-                # 强制激活
+                # 方法3: 强制激活
                 win32gui.BringWindowToTop(hwnd)
-                
-                # 方法3: 模拟Alt+Tab到该窗口
-                import time
-                time.sleep(0.1)  # 短暂等待
                 
                 # 方法4: 使用SetActiveWindow
                 win32gui.SetActiveWindow(hwnd)
@@ -150,13 +137,25 @@ class GameControllerRecorder:
                                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
                 
                 # 恢复窗口到正常层级（不影响我们的程序置顶）
+                import time
                 time.sleep(0.1)
                 win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, 
                                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
                 
-                # 分离线程输入
-                if current_thread != target_thread:
-                    win32gui.AttachThreadInput(current_thread, target_thread, False)
+                # 方法6: 模拟点击窗口来激活
+                try:
+                    # 获取窗口位置和大小
+                    rect = win32gui.GetWindowRect(hwnd)
+                    x = rect[0] + (rect[2] - rect[0]) // 2
+                    y = rect[1] + (rect[3] - rect[1]) // 2
+                    
+                    # 模拟鼠标点击窗口中心
+                    win32api.SetCursorPos((x, y))
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+                    time.sleep(0.05)
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                except:
+                    pass
                 
                 print(f"成功激活游戏窗口: {window_title}")
                 return True
