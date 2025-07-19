@@ -467,12 +467,16 @@ class GameControllerRecorder:
             import keyboard as kb  # 导入keyboard库用于全局热键
             
             # 注册全局热键
-            kb.add_hotkey('shift+f9', lambda: self.root.after(0, self.start_recording), suppress=True)
-            kb.add_hotkey('shift+f10', lambda: self.root.after(0, self.play_latest_recording), suppress=True)
-            kb.add_hotkey('shift+f11', lambda: self.root.after(0, self.show_recordings_list), suppress=True)
-            kb.add_hotkey('shift+f12', lambda: self.root.after(0, self.stop_operations), suppress=True)
+            kb.add_hotkey('shift+f9', self.hotkey_start_recording, suppress=True)
+            kb.add_hotkey('shift+f10', self.hotkey_play_latest, suppress=True)
+            kb.add_hotkey('shift+f11', self.hotkey_show_list, suppress=True)
+            kb.add_hotkey('shift+f12', self.hotkey_stop_operations, suppress=True)
             
             print("全局热键已注册: Shift+F9-F12")  # 调试信息
+            print("Shift+F9: 开始录制")  # 调试信息
+            print("Shift+F10: 播放最近录制")  # 调试信息
+            print("Shift+F11: 选择录制文件")  # 调试信息
+            print("Shift+F12: 停止所有操作")  # 调试信息
             
         except ImportError:
             print("keyboard库不可用，使用pynput热键")  # 调试信息
@@ -519,6 +523,26 @@ class GameControllerRecorder:
             )
             self.keyboard_listener.start()
             print("pynput热键监听器已启动")  # 调试信息
+    
+    def hotkey_start_recording(self):
+        """热键回调：开始录制"""
+        print("热键触发：开始录制")  # 调试信息
+        self.root.after(0, self.start_recording)
+    
+    def hotkey_play_latest(self):
+        """热键回调：播放最近录制"""
+        print("热键触发：播放最近录制")  # 调试信息
+        self.root.after(0, self.play_latest_recording)
+    
+    def hotkey_show_list(self):
+        """热键回调：显示录制列表"""
+        print("热键触发：显示录制列表")  # 调试信息
+        self.root.after(0, self.show_recordings_list)
+    
+    def hotkey_stop_operations(self):
+        """热键回调：停止所有操作"""
+        print("热键触发：停止所有操作")  # 调试信息
+        self.root.after(0, self.stop_operations)
     
     def update_joystick_status(self):
         """更新手柄状态显示"""
