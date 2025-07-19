@@ -205,21 +205,40 @@ class GameControllerRecorder:
             pygame.joystick.init()  # 初始化手柄系统
             
             joystick_count = pygame.joystick.get_count()  # 获取连接的手柄数量
-            print(f"检测到 {joystick_count} 个手柄")  # 打印手柄数量
+            print(f"检测到 {joystick_count} 个设备")  # 打印设备数量
             
-            for i in range(joystick_count):  # 遍历所有手柄
-                joystick = pygame.joystick.Joystick(i)  # 创建手柄对象
-                joystick.init()  # 初始化手柄
-                self.joysticks.append(joystick)  # 添加到手柄列表
+            # 过滤真实手柄设备
+            real_joysticks = []
+            for i in range(joystick_count):  # 遍历所有设备
+                joystick = pygame.joystick.Joystick(i)  # 创建设备对象
+                joystick.init()  # 初始化设备
                 
-                # 初始化手柄数据
+                # 获取设备信息
+                device_name = joystick.get_name()
+                axes_count = joystick.get_numaxes()
+                buttons_count = joystick.get_numbuttons()
+                
+                # 过滤条件：真实手柄通常有多个轴和按钮
+                # 虚拟设备通常轴和按钮数量较少
+                if axes_count >= 4 and buttons_count >= 8:
+                    real_joysticks.append(joystick)
+                    print(f"检测到真实手柄: {device_name} (轴:{axes_count}, 按钮:{buttons_count})")
+                else:
+                    print(f"过滤掉虚拟设备: {device_name} (轴:{axes_count}, 按钮:{buttons_count})")
+            
+            # 只使用真实手柄
+            self.joysticks = real_joysticks
+            print(f"实际使用 {len(self.joysticks)} 个真实手柄")
+            
+            # 初始化手柄数据
+            for joystick in self.joysticks:
                 self.current_joystick_data[joystick.get_id()] = {
                     'name': joystick.get_name(),  # 手柄名称
                     'axes': [0.0] * joystick.get_numaxes(),  # 轴数据数组，初始化为0
                     'buttons': [False] * joystick.get_numbuttons(),  # 按钮状态数组，初始化为False
                     'hats': [(0, 0)] * joystick.get_numhats()  # 帽子开关数组，初始化为(0,0)
                 }
-                print(f"检测到手柄: {joystick.get_name()}")  # 打印手柄名称
+                
         except Exception as e:
             print(f"手柄初始化失败: {e}")  # 打印错误信息
             self.joysticks = []  # 清空手柄列表
@@ -669,7 +688,7 @@ class GameControllerRecorder:
     def update_joystick_status(self):
         """更新手柄状态显示"""
         if self.joysticks:
-            status_text = f"🎮 手柄状态: 已连接 ({len(self.joysticks)}个)"
+            status_text = f"🎮 手柄状态: 已连接 ({len(self.joysticks)}个真实手柄)"
             if self.is_recording:
                 status_text += " - 🔴 录制中"
             elif self.is_playing:
