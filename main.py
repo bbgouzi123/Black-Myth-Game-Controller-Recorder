@@ -843,6 +843,10 @@ class GameControllerRecorder:
         self.play_btn.config(state="disabled", bg="#CCCCCC")
         self.log_message(f"开始循环播放: {filename}")
         
+        # 启动移动控制线程（确保回放时摇杆移动正常工作）
+        if not self.movement_running:
+            self.start_movement_thread()
+        
         # 启动播放线程
         play_thread = threading.Thread(target=self.playback_loop, args=(recording_data,))
         play_thread.daemon = True
@@ -1087,6 +1091,11 @@ class GameControllerRecorder:
         self.is_playing = False
         self.status_label.config(text="⏳ 等待操作...")
         self.play_btn.config(state="normal", bg="#4ECDC4")
+        
+        # 清理移动控制线程和按键状态
+        self.stop_movement_thread()
+        self.release_all_keys()
+        
         self.log_message("播放已停止")
     
     def stop_operations(self):
