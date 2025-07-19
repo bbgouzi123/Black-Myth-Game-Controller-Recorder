@@ -765,6 +765,7 @@ class GameControllerRecorder:
         if not self.is_recording:
             return
         
+        print("🛑 停止录制")  # 调试信息
         self.is_recording = False
         
         # 保存录制数据
@@ -777,7 +778,14 @@ class GameControllerRecorder:
             self.log_message(f"录制时长: {len(self.recording_data) * 0.016:.2f}秒")
         
         self.status_label.config(text="⏳ 等待操作...")
-        self.record_btn.config(state="normal", bg="#FF6B6B")
+        
+        # 恢复所有按钮状态到正常
+        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
+        
+        print("✅ 录制已停止，按钮状态已恢复")  # 调试信息
     
     def play_latest_recording(self):
         """播放最近的录制"""
@@ -1157,15 +1165,22 @@ class GameControllerRecorder:
     
     def stop_playback(self):
         """停止播放"""
+        print("🛑 停止播放")  # 调试信息
         self.is_playing = False
         self.status_label.config(text="⏳ 等待操作...")
-        self.play_btn.config(state="normal", bg="#4ECDC4")
+        
+        # 恢复所有按钮状态到正常
+        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
         
         # 清理移动控制线程和按键状态
         self.stop_movement_thread()
         self.release_all_keys()
         
         self.log_message("播放已停止")
+        print("✅ 播放已停止，按钮状态已恢复")  # 调试信息
     
     def stop_operations(self):
         """停止所有操作"""
@@ -1187,9 +1202,16 @@ class GameControllerRecorder:
         print("释放所有按键...")  # 调试信息
         self.release_all_keys()
         
+        # 恢复所有按钮状态到正常
+        print("恢复按钮状态...")  # 调试信息
         self.status_label.config(text="⏳ 等待操作...")
+        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
+        
         self.log_message("操作已停止")
-        print("✅ 所有操作已停止")  # 调试信息
+        print("✅ 所有操作已停止，按钮状态已恢复")  # 调试信息
     
     def release_all_keys(self):
         """释放所有当前按下的按键"""
