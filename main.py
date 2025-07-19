@@ -517,16 +517,17 @@ class GameControllerRecorder:
         # 录制按钮悬停效果
         def on_record_enter(e):
             if self.record_btn['state'] != 'disabled':
-                self.record_btn.config(bg="#FF1744", relief="raised", bd=2)
+                self.record_btn.config(bg="#FF1744")
         
         def on_record_leave(e):
             if self.record_btn['state'] != 'disabled':
-                self.record_btn.config(bg="#FF2E63", relief="flat", bd=0)
+                self.record_btn.config(bg="#FF2E63")
         
         def on_record_click(e):
-            # 点击动画效果
-            self.record_btn.config(relief="sunken", bd=2)
-            self.root.after(100, lambda: self.record_btn.config(relief="flat", bd=0))
+            # 点击动画效果 - 只改变颜色，不改变边框
+            original_bg = self.record_btn.cget('bg')
+            self.record_btn.config(bg="#FF1744")
+            self.root.after(100, lambda: self.record_btn.config(bg=original_bg))
         
         self.record_btn.bind("<Enter>", on_record_enter)
         self.record_btn.bind("<Leave>", on_record_leave)
@@ -535,16 +536,17 @@ class GameControllerRecorder:
         # 播放按钮悬停效果
         def on_play_enter(e):
             if self.play_btn['state'] != 'disabled':
-                self.play_btn.config(bg="#00BCD4", relief="raised", bd=2)
+                self.play_btn.config(bg="#00BCD4")
         
         def on_play_leave(e):
             if self.play_btn['state'] != 'disabled':
-                self.play_btn.config(bg="#08D9D6", relief="flat", bd=0)
+                self.play_btn.config(bg="#08D9D6")
         
         def on_play_click(e):
-            # 点击动画效果
-            self.play_btn.config(relief="sunken", bd=2)
-            self.root.after(100, lambda: self.play_btn.config(relief="flat", bd=0))
+            # 点击动画效果 - 只改变颜色，不改变边框
+            original_bg = self.play_btn.cget('bg')
+            self.play_btn.config(bg="#00BCD4")
+            self.root.after(100, lambda: self.play_btn.config(bg=original_bg))
         
         self.play_btn.bind("<Enter>", on_play_enter)
         self.play_btn.bind("<Leave>", on_play_leave)
@@ -552,15 +554,16 @@ class GameControllerRecorder:
         
         # 选择按钮悬停效果
         def on_list_enter(e):
-            self.list_btn.config(bg="#1976D2", relief="raised", bd=2)
+            self.list_btn.config(bg="#1976D2")
         
         def on_list_leave(e):
-            self.list_btn.config(bg="#252A34", relief="flat", bd=0)
+            self.list_btn.config(bg="#252A34")
         
         def on_list_click(e):
-            # 点击动画效果
-            self.list_btn.config(relief="sunken", bd=2)
-            self.root.after(100, lambda: self.list_btn.config(relief="flat", bd=0))
+            # 点击动画效果 - 只改变颜色，不改变边框
+            original_bg = self.list_btn.cget('bg')
+            self.list_btn.config(bg="#1976D2")
+            self.root.after(100, lambda: self.list_btn.config(bg=original_bg))
         
         self.list_btn.bind("<Enter>", on_list_enter)
         self.list_btn.bind("<Leave>", on_list_leave)
@@ -569,16 +572,17 @@ class GameControllerRecorder:
         # 停止按钮悬停效果
         def on_stop_enter(e):
             if self.stop_btn['state'] != 'disabled':
-                self.stop_btn.config(bg="#FF7043", relief="raised", bd=2)
+                self.stop_btn.config(bg="#FF7043")
         
         def on_stop_leave(e):
             if self.stop_btn['state'] != 'disabled':
-                self.stop_btn.config(bg="#FF9F43", relief="flat", bd=0)
+                self.stop_btn.config(bg="#FF9F43")
         
         def on_stop_click(e):
-            # 点击动画效果
-            self.stop_btn.config(relief="sunken", bd=2)
-            self.root.after(100, lambda: self.stop_btn.config(relief="flat", bd=0))
+            # 点击动画效果 - 只改变颜色，不改变边框
+            original_bg = self.stop_btn.cget('bg')
+            self.stop_btn.config(bg="#FF7043")
+            self.root.after(100, lambda: self.stop_btn.config(bg=original_bg))
         
         self.stop_btn.bind("<Enter>", on_stop_enter)
         self.stop_btn.bind("<Leave>", on_stop_leave)
