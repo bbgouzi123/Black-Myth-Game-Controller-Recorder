@@ -1,17 +1,16 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, scrolledtext
+import pygame
 import json
 import os
-import time
 import threading
+import time
 from datetime import datetime
-from pynput import keyboard, mouse
-import pygame
-import sys
-import ctypes
-from ctypes import wintypes
 import win32api
 import win32con
+import win32gui
+import win32process
+import psutil
 
 class GameControllerRecorder:
     def __init__(self):
@@ -805,7 +804,7 @@ class GameControllerRecorder:
     def start_recording(self):
         """开始录制手柄操作"""
         if self.is_recording:  # 检查是否已在录制中
-            messagebox.showwarning("警告", "已经在录制中！")  # 显示警告对话框
+            self.log_message("⚠️ 已经在录制中！")  # 在窗口中显示警告
             return  # 直接返回
         
         if self.is_playing:  # 检查是否正在播放
@@ -918,7 +917,7 @@ class GameControllerRecorder:
         """显示录制文件列表"""
         recordings = self.get_recordings_list()
         if not recordings:
-            messagebox.showinfo("提示", "没有找到录制文件！")
+            self.log_message("没有找到录制文件！")
             return
         
         # 创建选择窗口
@@ -963,7 +962,7 @@ class GameControllerRecorder:
     def play_recording(self, filename):
         """播放录制文件"""
         if self.is_playing:
-            messagebox.showwarning("警告", "正在播放中！")
+            self.log_message("⚠️ 正在播放中！")
             return
         
         if self.is_recording:
@@ -971,14 +970,14 @@ class GameControllerRecorder:
         
         file_path = os.path.join(self.recordings_dir, filename)
         if not os.path.exists(file_path):
-            messagebox.showerror("错误", f"文件不存在: {filename}")
+            self.log_message(f"文件不存在: {filename}")
             return
         
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 recording_data = json.load(f)
         except Exception as e:
-            messagebox.showerror("错误", f"读取文件失败: {str(e)}")
+            self.log_message(f"读取文件失败: {str(e)}")
             return
         
 
