@@ -493,11 +493,12 @@ class GameControllerRecorder:
                                  bg="#0F3460", fg="#00D4FF", pady=4)
         joystick_title.grid(row=0, column=0, sticky="ew")
         
-        self.joystick_data_text = scrolledtext.ScrolledText(joystick_frame, height=3, 
-                                                           font=("Consolas", 8),
-                                                           bg="#1A1A2E", fg="#08D9D6",
-                                                           insertbackground="#00D4FF",
-                                                           selectbackground="#FF2E63")
+        self.joystick_data_text = tk.Text(joystick_frame, height=3, 
+                                         font=("Consolas", 8),
+                                         bg="#1A1A2E", fg="#08D9D6",
+                                         insertbackground="#00D4FF",
+                                         selectbackground="#FF2E63",
+                                         relief="flat", bd=0)
         self.joystick_data_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=3, pady=3)
         
         # 操作日志 - 科技感样式
@@ -512,11 +513,12 @@ class GameControllerRecorder:
                             bg="#0F3460", fg="#00D4FF", pady=4)
         log_title.grid(row=0, column=0, sticky="ew")
         
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=3, 
-                                                 font=("微软雅黑", 8),
-                                                 bg="#1A1A2E", fg="#FF6B9D",
-                                                 insertbackground="#00D4FF",
-                                                 selectbackground="#FF2E63")
+        self.log_text = tk.Text(log_frame, height=3, 
+                               font=("微软雅黑", 8),
+                               bg="#1A1A2E", fg="#FF6B9D",
+                               insertbackground="#00D4FF",
+                               selectbackground="#FF2E63",
+                               relief="flat", bd=0)
         self.log_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=3, pady=3)
         
         # 底部信息 - 科技感样式
