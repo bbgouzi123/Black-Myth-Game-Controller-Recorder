@@ -623,43 +623,49 @@ class GameControllerRecorder:
         except ImportError:
             print("keyboard库不可用，使用pynput热键")  # 调试信息
             # 备用方案：使用pynput
-            self.shift_pressed = False  # 跟踪Shift键状态
-            
-            def on_key_press(key):
-                try:
-                    # 检测Shift键按下
+            try:
+                from pynput import keyboard  # 导入pynput的keyboard模块
+                
+                self.shift_pressed = False  # 跟踪Shift键状态
+                
+                def on_key_press(key):
+                    try:
+                        # 检测Shift键按下
+                        if key == keyboard.Key.shift:
+                            self.shift_pressed = True
+                            print("Shift键按下")  # 调试信息
+                            return
+                        
+                        # 检测F9-F10键
+                        if self.shift_pressed:
+                            print(f"检测到组合键: {key}")  # 调试信息
+                            if key == keyboard.Key.f9:
+                                print("触发Shift+F9 - 开始录制")  # 调试信息
+                                self.root.after(0, self.start_recording)
+                            elif key == keyboard.Key.f10:
+                                print("触发Shift+F10 - 循环最近一次")  # 调试信息
+                                self.root.after(0, self.play_latest_recording)
+                                
+                    except AttributeError as e:
+                        print(f"热键处理错误: {e}")  # 调试信息
+                        pass
+                
+                def on_key_release(key):
+                    # 检测Shift键释放
                     if key == keyboard.Key.shift:
-                        self.shift_pressed = True
-                        print("Shift键按下")  # 调试信息
-                        return
-                    
-                    # 检测F9-F10键
-                    if self.shift_pressed:
-                        print(f"检测到组合键: {key}")  # 调试信息
-                        if key == keyboard.Key.f9:
-                            print("触发Shift+F9 - 开始录制")  # 调试信息
-                            self.root.after(0, self.start_recording)
-                        elif key == keyboard.Key.f10:
-                            print("触发Shift+F10 - 循环最近一次")  # 调试信息
-                            self.root.after(0, self.play_latest_recording)
-                            
-                except AttributeError as e:
-                    print(f"热键处理错误: {e}")  # 调试信息
-                    pass
-            
-            def on_key_release(key):
-                # 检测Shift键释放
-                if key == keyboard.Key.shift:
-                    self.shift_pressed = False
-                    print("Shift键释放")  # 调试信息
-            
-            # 创建键盘监听器
-            self.keyboard_listener = keyboard.Listener(
-                on_press=on_key_press,
-                on_release=on_key_release
-            )
-            self.keyboard_listener.start()
-            print("pynput热键监听器已启动")  # 调试信息
+                        self.shift_pressed = False
+                        print("Shift键释放")  # 调试信息
+                
+                # 创建键盘监听器
+                self.keyboard_listener = keyboard.Listener(
+                    on_press=on_key_press,
+                    on_release=on_key_release
+                )
+                self.keyboard_listener.start()
+                print("pynput热键监听器已启动")  # 调试信息
+                
+            except ImportError:
+                print("pynput库也不可用，热键功能将不可用")  # 调试信息
     
     def hotkey_start_recording(self):
         """热键回调：开始录制"""
