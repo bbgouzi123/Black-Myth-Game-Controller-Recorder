@@ -300,7 +300,7 @@ class GameControllerRecorder:
         self.play_btn.grid(row=0, column=1, padx=2, pady=2)
         
         # 播放按钮提示
-        play_tip = tk.Label(button_frame, text="循环播放\n(Shift+F10)", 
+        play_tip = tk.Label(button_frame, text="循环最近一次\n(Shift+F10)", 
                            font=("微软雅黑", 6), fg="#666666")
         play_tip.grid(row=0, column=1, padx=(0, 0), pady=(35, 0), sticky="s")
         
@@ -312,7 +312,7 @@ class GameControllerRecorder:
         self.list_btn.grid(row=1, column=0, padx=2, pady=2)
         
         # 选择按钮提示
-        list_tip = tk.Label(button_frame, text="选择\n(Shift+F11)", 
+        list_tip = tk.Label(button_frame, text="选择", 
                            font=("微软雅黑", 6), fg="#666666")
         list_tip.grid(row=1, column=0, padx=(0, 0), pady=(35, 0), sticky="s")
         
@@ -323,7 +323,7 @@ class GameControllerRecorder:
         self.stop_btn.grid(row=1, column=1, padx=2, pady=2)
         
         # 停止按钮提示
-        stop_tip = tk.Label(button_frame, text="紧急停止\n(Shift+F12)", 
+        stop_tip = tk.Label(button_frame, text="停止", 
                            font=("微软雅黑", 6), fg="#666666")
         stop_tip.grid(row=1, column=1, padx=(0, 0), pady=(35, 0), sticky="s")
         
@@ -501,21 +501,17 @@ class GameControllerRecorder:
         self.emergency_btn.bind("<Button-1>", on_emergency_click)
     
     def setup_global_hotkeys(self):
-        """设置全局热键 - 使用Shift+F9-F12组合键"""
+        """设置全局热键 - 只保留Shift+F9录制和Shift+F10循环播放"""
         try:
             import keyboard as kb  # 导入keyboard库用于全局热键
             
             # 注册全局热键
             kb.add_hotkey('shift+f9', self.hotkey_start_recording, suppress=True)
             kb.add_hotkey('shift+f10', self.hotkey_play_latest, suppress=True)
-            kb.add_hotkey('shift+f11', self.hotkey_show_list, suppress=True)
-            kb.add_hotkey('shift+f12', self.hotkey_stop_operations, suppress=True)
             
-            print("全局热键已注册: Shift+F9-F12")  # 调试信息
+            print("全局热键已注册: Shift+F9-F10")  # 调试信息
             print("Shift+F9: 开始录制")  # 调试信息
-            print("Shift+F10: 播放最近录制")  # 调试信息
-            print("Shift+F11: 选择录制文件")  # 调试信息
-            print("Shift+F12: 停止所有操作")  # 调试信息
+            print("Shift+F10: 循环最近一次")  # 调试信息
             
         except ImportError:
             print("keyboard库不可用，使用pynput热键")  # 调试信息
@@ -530,21 +526,15 @@ class GameControllerRecorder:
                         print("Shift键按下")  # 调试信息
                         return
                     
-                    # 检测F9-F12键
+                    # 检测F9-F10键
                     if self.shift_pressed:
                         print(f"检测到组合键: {key}")  # 调试信息
                         if key == keyboard.Key.f9:
                             print("触发Shift+F9 - 开始录制")  # 调试信息
                             self.root.after(0, self.start_recording)
                         elif key == keyboard.Key.f10:
-                            print("触发Shift+F10 - 播放最近")  # 调试信息
+                            print("触发Shift+F10 - 循环最近一次")  # 调试信息
                             self.root.after(0, self.play_latest_recording)
-                        elif key == keyboard.Key.f11:
-                            print("触发Shift+F11 - 选择播放")  # 调试信息
-                            self.root.after(0, self.show_recordings_list)
-                        elif key == keyboard.Key.f12:
-                            print("触发Shift+F12 - 停止操作")  # 调试信息
-                            self.root.after(0, self.stop_operations)
                 except AttributeError as e:
                     print(f"热键处理错误: {e}")  # 调试信息
                     pass
@@ -569,8 +559,8 @@ class GameControllerRecorder:
         self.root.after(0, self.start_recording)
     
     def hotkey_play_latest(self):
-        """热键回调：播放最近录制"""
-        print("热键触发：播放最近录制")  # 调试信息
+        """热键回调：循环最近一次"""
+        print("热键触发：循环最近一次")  # 调试信息
         self.root.after(0, self.play_latest_recording)
     
     def hotkey_show_list(self):
@@ -822,13 +812,14 @@ class GameControllerRecorder:
         print("✅ 录制已停止，按钮状态已恢复")  # 调试信息
     
     def play_latest_recording(self):
-        """播放最近的录制"""
+        """播放最近一次录制"""
         recordings = self.get_recordings_list()
         if not recordings:
-            messagebox.showinfo("提示", "没有找到录制文件！")
+            self.log_message("没有找到录制文件")
             return
         
-        latest_file = recordings[-1]
+        latest_file = recordings[-1]  # 获取最新的录制文件
+        self.log_message(f"开始循环最近一次: {latest_file}")
         self.play_recording(latest_file)
     
     def get_recordings_list(self):
