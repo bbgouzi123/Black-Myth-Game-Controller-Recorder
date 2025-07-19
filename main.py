@@ -415,7 +415,7 @@ class GameControllerRecorder:
         self.record_btn.grid(row=0, column=0, padx=3, pady=3, sticky="ew")
         
         # 录制按钮提示
-        record_tip = tk.Label(button_frame, text="录制\nShift+F9", 
+        record_tip = tk.Label(button_frame, text="录制\nF9", 
                              font=("微软雅黑", 7, "bold"), fg="#FF6B9D", bg="#1A1A2E")
         record_tip.grid(row=1, column=0, pady=(2, 0))
         
@@ -428,8 +428,8 @@ class GameControllerRecorder:
         self.play_btn.grid(row=0, column=1, padx=3, pady=3, sticky="ew")
         
         # 播放按钮提示
-        play_tip = tk.Label(button_frame, text="循环最近一次\nShift+F10", 
-                           font=("微软雅黑", 7, "bold"), fg="#4ECDC4", bg="#1A1A2E")
+        play_tip = tk.Label(button_frame, text="播放\nF10", 
+                           font=("微软雅黑", 7, "bold"), fg="#64B5F6", bg="#1A1A2E")
         play_tip.grid(row=1, column=1, pady=(2, 0))
         
         # 选择按钮 - 科技感蓝色
@@ -608,17 +608,17 @@ class GameControllerRecorder:
         self.stop_btn.bind("<Button-1>", on_stop_click)
     
     def setup_global_hotkeys(self):
-        """设置全局热键 - 只保留Shift+F9录制和Shift+F10循环播放"""
+        """设置全局热键 - 使用单独的F9和F10键"""
         try:
             import keyboard as kb  # 导入keyboard库用于全局热键
             
             # 注册全局热键
-            kb.add_hotkey('shift+f9', self.hotkey_start_recording, suppress=True)
-            kb.add_hotkey('shift+f10', self.hotkey_play_latest, suppress=True)
+            kb.add_hotkey('f9', self.hotkey_start_recording, suppress=True)
+            kb.add_hotkey('f10', self.hotkey_play_latest, suppress=True)
             
-            print("全局热键已注册: Shift+F9-F10")  # 调试信息
-            print("Shift+F9: 开始录制")  # 调试信息
-            print("Shift+F10: 循环最近一次")  # 调试信息
+            print("全局热键已注册: F9-F10")  # 调试信息
+            print("F9: 开始录制")  # 调试信息
+            print("F10: 循环最近一次")  # 调试信息
             
         except ImportError:
             print("keyboard库不可用，使用pynput热键")  # 调试信息
@@ -626,40 +626,24 @@ class GameControllerRecorder:
             try:
                 from pynput import keyboard  # 导入pynput的keyboard模块
                 
-                self.shift_pressed = False  # 跟踪Shift键状态
-                
                 def on_key_press(key):
                     try:
-                        # 检测Shift键按下
-                        if key == keyboard.Key.shift:
-                            self.shift_pressed = True
-                            print("Shift键按下")  # 调试信息
-                            return
-                        
                         # 检测F9-F10键
-                        if self.shift_pressed:
-                            print(f"检测到组合键: {key}")  # 调试信息
-                            if key == keyboard.Key.f9:
-                                print("触发Shift+F9 - 开始录制")  # 调试信息
-                                self.root.after(0, self.start_recording)
-                            elif key == keyboard.Key.f10:
-                                print("触发Shift+F10 - 循环最近一次")  # 调试信息
-                                self.root.after(0, self.play_latest_recording)
+                        print(f"检测到按键: {key}")  # 调试信息
+                        if key == keyboard.Key.f9:
+                            print("触发F9 - 开始录制")  # 调试信息
+                            self.root.after(0, self.start_recording)
+                        elif key == keyboard.Key.f10:
+                            print("触发F10 - 循环最近一次")  # 调试信息
+                            self.root.after(0, self.play_latest_recording)
                                 
                     except AttributeError as e:
                         print(f"热键处理错误: {e}")  # 调试信息
                         pass
                 
-                def on_key_release(key):
-                    # 检测Shift键释放
-                    if key == keyboard.Key.shift:
-                        self.shift_pressed = False
-                        print("Shift键释放")  # 调试信息
-                
                 # 创建键盘监听器
                 self.keyboard_listener = keyboard.Listener(
-                    on_press=on_key_press,
-                    on_release=on_key_release
+                    on_press=on_key_press
                 )
                 self.keyboard_listener.start()
                 print("pynput热键监听器已启动")  # 调试信息
