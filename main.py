@@ -35,30 +35,6 @@ class GameControllerRecorder:
         # 设置窗口位置在右下角
         self.set_window_position()
         
-    def set_window_position(self):
-        """设置窗口位置在屏幕右下角"""
-        try:
-            # 获取屏幕尺寸
-            screen_width = self.root.winfo_screenwidth()  # 获取屏幕宽度
-            screen_height = self.root.winfo_screenheight()  # 获取屏幕高度
-            
-            # 获取窗口尺寸
-            window_width = 300  # 窗口宽度
-            window_height = 300  # 窗口高度
-            
-            # 计算右下角位置（留出更多边距，避免被任务栏遮挡）
-            margin_x = 50  # 水平边距
-            margin_y = 80  # 垂直边距（给任务栏留空间）
-            x_position = screen_width - window_width - margin_x  # X坐标
-            y_position = screen_height - window_height - margin_y  # Y坐标
-            
-            # 设置窗口位置
-            self.root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
-            
-            print(f"窗口已定位到右下角: ({x_position}, {y_position})")  # 调试信息
-        except Exception as e:
-            print(f"设置窗口位置失败: {e}")  # 调试信息
-        
         # 创建recordings文件夹
         self.recordings_dir = "recordings"
         if not os.path.exists(self.recordings_dir):
@@ -88,6 +64,10 @@ class GameControllerRecorder:
         
         # 加载手柄配置
         self.controller_config = self.load_controller_config()
+        
+        # 添加持续按键状态管理 - 用于流畅的摇杆移动
+        self.pressed_keys = set()  # 当前按下的按键集合
+        self.last_joystick_state = {}  # 上一次摇杆状态，用于检测变化
         
         self.setup_ui()
         self.setup_global_hotkeys()
@@ -922,29 +902,54 @@ class GameControllerRecorder:
                         win32api.keybd_event(ord('E'), 0, win32con.KEYEVENTF_KEYUP, 0)
                         print("右摇杆按下 - 场景互动")
             
-            # 处理左摇杆移动 (WASD控制)
-            if abs(left_x) > 0.1 or abs(left_y) > 0.1:
-                if left_y < -0.1:  # 前进
-                    win32api.keybd_event(ord('W'), 0, 0, 0)
-                    time.sleep(0.02)
+            # 处理左摇杆移动 (WASD控制) - 使用持续按键实现流畅移动
+            current_keys = set()  # 当前需要按下的按键集合
+            
+            # 根据摇杆位置确定需要按下的按键
+            if left_y < -0.1:  # 前进
+                current_keys.add('W')
+            elif left_y > 0.1:  # 后退
+                current_keys.add('S')
+            
+            if left_x < -0.1:  # 左移
+                current_keys.add('A')
+            elif left_x > 0.1:  # 右移
+                current_keys.add('D')
+            
+            # 释放不再需要的按键
+            keys_to_release = self.pressed_keys - current_keys
+            for key in keys_to_release:
+                if key == 'W':
                     win32api.keybd_event(ord('W'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("左摇杆 - 前进(W)")
-                elif left_y > 0.1:  # 后退
-                    win32api.keybd_event(ord('S'), 0, 0, 0)
-                    time.sleep(0.02)
+                    print(f"释放按键: {key}")
+                elif key == 'S':
                     win32api.keybd_event(ord('S'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("左摇杆 - 后退(S)")
-                
-                if left_x < -0.1:  # 左移
-                    win32api.keybd_event(ord('A'), 0, 0, 0)
-                    time.sleep(0.02)
+                    print(f"释放按键: {key}")
+                elif key == 'A':
                     win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("左摇杆 - 左移(A)")
-                elif left_x > 0.1:  # 右移
-                    win32api.keybd_event(ord('D'), 0, 0, 0)
-                    time.sleep(0.02)
+                    print(f"释放按键: {key}")
+                elif key == 'D':
                     win32api.keybd_event(ord('D'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("左摇杆 - 右移(D)")
+                    print(f"释放按键: {key}")
+            
+            # 按下新需要的按键
+            keys_to_press = current_keys - self.pressed_keys
+            for key in keys_to_press:
+                if key == 'W':
+                    win32api.keybd_event(ord('W'), 0, 0, 0)
+                    print(f"按下按键: {key} - 前进")
+                elif key == 'S':
+                    win32api.keybd_event(ord('S'), 0, 0, 0)
+                    print(f"按下按键: {key} - 后退")
+                elif key == 'A':
+                    win32api.keybd_event(ord('A'), 0, 0, 0)
+                    print(f"按下按键: {key} - 左移")
+                elif key == 'D':
+                    win32api.keybd_event(ord('D'), 0, 0, 0)
+                    print(f"按下按键: {key} - 右移")
+            
+            # 更新当前按下的按键状态
+            self.pressed_keys = current_keys
             
             # 处理右摇杆 (视角控制 - 鼠标移动)
             if abs(right_x) > 0.1 or abs(right_y) > 0.1:
@@ -1008,11 +1013,32 @@ class GameControllerRecorder:
         if self.is_playing:
             self.stop_playback()
         
+        # 释放所有当前按下的按键，避免按键卡住
+        self.release_all_keys()
+        
         self.status_label.config(text="⏳ 等待操作...")
         self.log_message("操作已停止")
     
+    def release_all_keys(self):
+        """释放所有当前按下的按键"""
+        try:
+            for key in self.pressed_keys:
+                if key == 'W':
+                    win32api.keybd_event(ord('W'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                elif key == 'S':
+                    win32api.keybd_event(ord('S'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                elif key == 'A':
+                    win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                elif key == 'D':
+                    win32api.keybd_event(ord('D'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                print(f"释放按键: {key}")
+            
+            # 清空按键状态
+            self.pressed_keys.clear()
+            print("所有按键已释放")
+        except Exception as e:
+            print(f"释放按键失败: {e}")
 
-    
     def run(self):
         """运行程序"""
         try:
@@ -1020,6 +1046,8 @@ class GameControllerRecorder:
         except KeyboardInterrupt:
             self.stop_operations()
         finally:
+            # 确保程序退出时释放所有按键
+            self.release_all_keys()
             if self.keyboard_listener:
                 self.keyboard_listener.stop()
             pygame.quit()
