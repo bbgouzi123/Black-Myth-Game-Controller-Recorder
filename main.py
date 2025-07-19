@@ -66,6 +66,84 @@ class GameControllerRecorder:
         # 设置全局热键
         self.setup_global_hotkeys()
     
+    def find_and_activate_game_window(self):
+        """查找并激活黑神话游戏窗口"""
+        try:
+            import psutil
+            
+            # 查找名为b1-Win64-Shipping.exe的进程
+            target_process = None
+            for proc in psutil.process_iter(['pid', 'name', 'exe']):
+                try:
+                    if proc.info['name'] == 'b1-Win64-Shipping.exe':
+                        target_process = proc
+                        print(f"找到黑神话游戏进程: {proc.info['name']} (PID: {proc.info['pid']})")
+                        break
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            
+            if not target_process:
+                print("未找到黑神话游戏进程 b1-Win64-Shipping.exe")
+                return False
+            
+            # 查找该进程的窗口
+            import win32gui
+            import win32process
+            
+            def enum_windows_callback(hwnd, windows):
+                try:
+                    # 获取窗口进程ID
+                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                    if pid == target_process.info['pid']:
+                        # 检查窗口是否可见
+                        if win32gui.IsWindowVisible(hwnd):
+                            window_title = win32gui.GetWindowText(hwnd)
+                            if window_title:  # 确保窗口有标题
+                                windows.append((hwnd, window_title))
+                except:
+                    pass
+                return True
+            
+            windows = []
+            win32gui.EnumWindows(enum_windows_callback, windows)
+            
+            if not windows:
+                print("未找到黑神话游戏窗口")
+                return False
+            
+            # 选择第一个找到的窗口
+            hwnd, window_title = windows[0]
+            print(f"找到游戏窗口: {window_title} (句柄: {hwnd})")
+            
+            # 激活窗口
+            try:
+                # 将窗口带到前台
+                win32gui.ShowWindow(hwnd, 5)  # SW_SHOW
+                win32gui.SetForegroundWindow(hwnd)
+                
+                # 确保窗口处于活动状态
+                import win32con
+                win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, 
+                                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
+                
+                # 恢复窗口到正常层级（不影响我们的程序置顶）
+                win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, 
+                                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
+                
+                print(f"成功激活游戏窗口: {window_title}")
+                return True
+                
+            except Exception as e:
+                print(f"激活游戏窗口失败: {e}")
+                return False
+                
+        except ImportError:
+            print("缺少psutil库，无法自动激活游戏窗口")
+            return False
+        except Exception as e:
+            print(f"查找游戏窗口时出错: {e}")
+            return False
+    
     def set_window_position(self):
         """设置窗口位置在屏幕右下角"""
         try:
@@ -522,6 +600,13 @@ class GameControllerRecorder:
     def hotkey_play_latest(self):
         """热键回调：循环最近一次"""
         print("热键触发：循环最近一次")  # 调试信息
+        
+        # 自动激活游戏窗口
+        if self.find_and_activate_game_window():
+            print("游戏窗口已激活，开始循环播放")
+        else:
+            print("无法激活游戏窗口，但仍继续播放")
+        
         self.root.after(0, self.play_latest_recording)
     
     def hotkey_show_list(self):
