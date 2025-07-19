@@ -493,12 +493,13 @@ class GameControllerRecorder:
                                  bg="#0F3460", fg="#00D4FF", pady=4)
         joystick_title.grid(row=0, column=0, sticky="ew")
         
-        self.joystick_data_text = tk.Text(joystick_frame, height=3, 
+        self.joystick_data_text = tk.Text(joystick_frame, height=4, 
                                          font=("Consolas", 8),
                                          bg="#1A1A2E", fg="#08D9D6",
                                          insertbackground="#00D4FF",
                                          selectbackground="#FF2E63",
-                                         relief="flat", bd=0)
+                                         relief="flat", bd=0,
+                                         state="disabled")  # 设置为只读
         self.joystick_data_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=3, pady=3)
         
         # 操作日志 - 科技感样式
@@ -513,12 +514,13 @@ class GameControllerRecorder:
                             bg="#0F3460", fg="#00D4FF", pady=4)
         log_title.grid(row=0, column=0, sticky="ew")
         
-        self.log_text = tk.Text(log_frame, height=3, 
+        self.log_text = tk.Text(log_frame, height=4, 
                                font=("微软雅黑", 8),
                                bg="#1A1A2E", fg="#FF6B9D",
                                insertbackground="#00D4FF",
                                selectbackground="#FF2E63",
-                               relief="flat", bd=0)
+                               relief="flat", bd=0,
+                               state="disabled")  # 设置为只读
         self.log_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=3, pady=3)
         
         # 底部信息 - 科技感样式
@@ -705,8 +707,11 @@ class GameControllerRecorder:
     def update_joystick_data_display(self):
         """更新手柄实时数据显示"""
         if not self.joysticks:
+            # 临时启用编辑，更新内容，然后重新禁用
+            self.joystick_data_text.config(state="normal")
             self.joystick_data_text.delete(1.0, tk.END)
             self.joystick_data_text.insert(tk.END, "未检测到手柄")
+            self.joystick_data_text.config(state="disabled")
             self.root.after(100, self.update_joystick_data_display)
             return
         
@@ -771,8 +776,11 @@ class GameControllerRecorder:
             
             display_text += "\n"
         
+        # 临时启用编辑，更新内容，然后重新禁用
+        self.joystick_data_text.config(state="normal")
         self.joystick_data_text.delete(1.0, tk.END)
         self.joystick_data_text.insert(tk.END, display_text)
+        self.joystick_data_text.config(state="disabled")
         self.root.after(100, self.update_joystick_data_display)
     
     def get_axis_name(self, axis_index):
@@ -819,8 +827,13 @@ class GameControllerRecorder:
         """添加日志消息"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}\n"
+        
+        # 临时启用编辑，插入内容，然后重新禁用
+        self.log_text.config(state="normal")
         self.log_text.insert(tk.END, log_entry)
         self.log_text.see(tk.END)
+        self.log_text.config(state="disabled")
+        
         print(log_entry.strip())
     
     def start_recording(self):
