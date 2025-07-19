@@ -1223,3 +1223,121 @@ class GameControllerRecorder:
             self.log_message(f"发送数据失败: {e}")
     
     def non_blocking_sleep(self, duration):
+        """非阻塞的睡眠，能够响应停止信号"""
+        start_time = time.time()
+        while time.time() - start_time < duration and self.is_playing and not self.force_stop:
+            time.sleep(0.001)  # 每1毫秒检查一次停止状态
+    
+    def stop_playback(self):
+        """停止播放"""
+        print("🛑 停止播放")  # 调试信息
+        self.is_playing = False
+        self.force_stop = False # 确保强制停止标志被重置
+        self.status_label.config(text="⏳ 等待操作...")
+        
+        # 恢复所有按钮状态到正常
+        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
+        
+        # 清理移动控制线程和按键状态
+        self.stop_movement_thread()
+        self.release_all_keys()
+        
+        self.log_message("播放已停止")
+        print("✅ 播放已停止，按钮状态已恢复")  # 调试信息
+    
+    def stop_operations(self):
+        """停止所有操作"""
+        print("🛑 执行停止所有操作")  # 调试信息
+        
+        if self.is_recording:
+            print("停止录制...")  # 调试信息
+            self.stop_recording()
+        
+        if self.is_playing:
+            print("停止播放...")  # 调试信息
+            self.stop_playback()
+        
+        # 停止移动控制线程
+        print("停止移动控制线程...")  # 调试信息
+        self.stop_movement_thread()
+        
+        # 释放所有当前按下的按键，避免按键卡住
+        print("释放所有按键...")  # 调试信息
+        self.release_all_keys()
+        
+        # 重置强制停止标志
+        self.force_stop = False
+        
+        # 恢复所有按钮状态到正常
+        print("恢复按钮状态...")  # 调试信息
+        self.status_label.config(text="⏳ 等待操作...")
+        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
+        
+        self.log_message("操作已停止")
+        print("✅ 所有操作已停止，按钮状态已恢复")  # 调试信息
+    
+    def release_all_keys(self):
+        """释放所有当前按下的按键"""
+        try:
+            # 释放WASD按键
+            for key in ['W', 'A', 'S', 'D']:
+                try:
+                    if key == 'W':
+                        win32api.keybd_event(ord('W'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                    elif key == 'A':
+                        win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                    elif key == 'S':
+                        win32api.keybd_event(ord('S'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                    elif key == 'D':
+                        win32api.keybd_event(ord('D'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                except:
+                    pass
+            
+            # 清空按键状态
+            self.pressed_keys.clear()
+            with self.movement_lock:
+                self.target_keys.clear()
+            
+            print("所有按键已释放")
+            
+        except Exception as e:
+            print(f"释放按键失败: {e}")
+    
+    def run(self):
+        """运行主程序"""
+        try:
+            # 设置窗口位置
+            self.set_window_position()
+            
+            # 初始化手柄
+            self.init_joysticks()
+            
+            # 设置全局热键
+            self.setup_global_hotkeys()
+            
+            # 设置按钮悬停效果
+            self.setup_button_hover_effects()
+            
+            # 启动手柄状态更新
+            self.update_joystick_status()
+            
+            print("应用实例创建成功")
+            
+            # 运行主循环
+            self.root.mainloop()
+            
+        except Exception as e:
+            print(f"程序运行错误: {e}")
+        finally:
+            # 清理资源
+            self.stop_operations()
+
+if __name__ == "__main__":
+    app = GameControllerRecorder()
+    app.run()
