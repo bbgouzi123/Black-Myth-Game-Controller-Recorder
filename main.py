@@ -435,8 +435,8 @@ class GameControllerRecorder:
         self.stop_btn.grid(row=0, column=3, padx=3, pady=3, sticky="ew")
         
         # 停止按钮提示
-        stop_tip = tk.Label(button_frame, text="停止\nShift+F12", 
-                           font=("微软雅黑", 7, "bold"), fg="#FFB74D", bg="#1A1A2E")
+        stop_tip = tk.Label(button_frame, text="停止\nShift+F12\nCtrl+Alt+S", 
+                           font=("微软雅黑", 6, "bold"), fg="#FFB74D", bg="#1A1A2E")
         stop_tip.grid(row=1, column=3, pady=(2, 0))
         
         # 设置按钮悬停效果
@@ -597,23 +597,36 @@ class GameControllerRecorder:
             kb.add_hotkey('shift+f9', self.hotkey_start_recording, suppress=True)
             kb.add_hotkey('shift+f10', self.hotkey_play_latest, suppress=True)
             kb.add_hotkey('shift+f12', self.hotkey_stop_operations, suppress=True)
+            # 添加紧急停止热键
+            kb.add_hotkey('ctrl+alt+s', self.emergency_stop, suppress=True)
             
-            print("全局热键已注册: Shift+F9-F10, Shift+F12")  # 调试信息
+            print("全局热键已注册: Shift+F9-F10, Shift+F12, Ctrl+Alt+S")  # 调试信息
             print("Shift+F9: 开始录制")  # 调试信息
             print("Shift+F10: 循环最近一次")  # 调试信息
             print("Shift+F12: 停止所有操作")  # 调试信息
+            print("Ctrl+Alt+S: 紧急停止")  # 调试信息
             
         except ImportError:
             print("keyboard库不可用，使用pynput热键")  # 调试信息
             # 备用方案：使用pynput
             self.shift_pressed = False  # 跟踪Shift键状态
+            self.ctrl_pressed = False   # 跟踪Ctrl键状态
+            self.alt_pressed = False    # 跟踪Alt键状态
             
             def on_key_press(key):
                 try:
-                    # 检测Shift键按下
+                    # 检测修饰键按下
                     if key == keyboard.Key.shift:
                         self.shift_pressed = True
                         print("Shift键按下")  # 调试信息
+                        return
+                    elif key == keyboard.Key.ctrl:
+                        self.ctrl_pressed = True
+                        print("Ctrl键按下")  # 调试信息
+                        return
+                    elif key == keyboard.Key.alt:
+                        self.alt_pressed = True
+                        print("Alt键按下")  # 调试信息
                         return
                     
                     # 检测F9-F10-F12键
@@ -628,15 +641,28 @@ class GameControllerRecorder:
                         elif key == keyboard.Key.f12:
                             print("触发Shift+F12 - 停止所有操作")  # 调试信息
                             self.root.after(0, self.stop_operations)
+                    
+                    # 检测紧急停止组合键 Ctrl+Alt+S
+                    if self.ctrl_pressed and self.alt_pressed:
+                        if hasattr(key, 'char') and key.char == 's':
+                            print("触发Ctrl+Alt+S - 紧急停止")  # 调试信息
+                            self.root.after(0, self.emergency_stop)
+                            
                 except AttributeError as e:
                     print(f"热键处理错误: {e}")  # 调试信息
                     pass
             
             def on_key_release(key):
-                # 检测Shift键释放
+                # 检测修饰键释放
                 if key == keyboard.Key.shift:
                     self.shift_pressed = False
                     print("Shift键释放")  # 调试信息
+                elif key == keyboard.Key.ctrl:
+                    self.ctrl_pressed = False
+                    print("Ctrl键释放")  # 调试信息
+                elif key == keyboard.Key.alt:
+                    self.alt_pressed = False
+                    print("Alt键释放")  # 调试信息
             
             # 创建键盘监听器
             self.keyboard_listener = keyboard.Listener(
@@ -1037,8 +1063,8 @@ class GameControllerRecorder:
                 data_count = 0  # 调试计数器
                 
                 for data in recording_data:
-                    # 每5条数据检查一次停止状态
-                    if data_count % 5 == 0 and (not self.is_playing or self.force_stop):
+                    # 每条数据都检查停止状态
+                    if not self.is_playing or self.force_stop:
                         print("检测到停止信号，退出播放循环")  # 调试信息
                         break
                     
@@ -1050,9 +1076,9 @@ class GameControllerRecorder:
                     target_time = data['time']
                     current_time = time.time() - start_time
                     
-                    # 将等待时间分成更小的片段，每0.001秒检查一次停止状态
+                    # 将等待时间分成更小的片段，每0.0001秒检查一次停止状态
                     while current_time < target_time and self.is_playing and not self.force_stop:
-                        time.sleep(0.001)  # 减少到0.001秒
+                        time.sleep(0.0001)  # 减少到0.0001秒，更频繁检查
                         current_time = time.time() - start_time
                     
                     if not self.is_playing or self.force_stop:
@@ -1097,6 +1123,10 @@ class GameControllerRecorder:
     def send_keyboard_mouse_data(self, data):
         """通过键盘鼠标模拟发送数据 - 基于黑神话游戏操作"""
         try:
+            # 首先检查是否应该停止
+            if not self.is_playing or self.force_stop:
+                return
+                
             axes = data['axes']
             buttons = data['buttons']
             hats = data['hats']
@@ -1122,70 +1152,89 @@ class GameControllerRecorder:
             
             # 处理按钮 - 黑神话游戏按键映射
             for i, button in enumerate(buttons):
+                # 每个按钮操作前都检查停止状态
+                if not self.is_playing or self.force_stop:
+                    return
+                    
                 if button and i in button_mapping:
                     key = button_mapping[i]
                     
-                    # 检查是否应该停止
-                    if not self.is_playing or self.force_stop:
-                        break
-                    
                     # A按钮 - 跳跃 (空格键)
                     if key == 'SPACE':
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_SPACE, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_SPACE, 0, win32con.KEYEVENTF_KEYUP, 0)
                     
                     # B按钮 - 翻滚/闪身 (Ctrl键)
                     elif key == 'CTRL':
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_CONTROL, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
                     
                     # X按钮 - 轻攻击 (鼠标左键)
                     elif key == 'MOUSE_LEFT':
+                        if not self.is_playing or self.force_stop: return
                         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
                     
                     # Y按钮 - 重攻击 (鼠标右键)
                     elif key == 'MOUSE_RIGHT':
+                        if not self.is_playing or self.force_stop: return
                         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
                     
                     # LB按钮 - 饮酒 (R键)
                     elif key == 'R':
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(ord('R'), 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(ord('R'), 0, win32con.KEYEVENTF_KEYUP, 0)
                     
                     # RB按钮 - 疾奔 (Shift键)
                     elif key == 'SHIFT':
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_SHIFT, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_SHIFT, 0, win32con.KEYEVENTF_KEYUP, 0)
                     
                     # BACK按钮 - 菜单 (ESC键)
                     elif key == 'ESC':
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_ESCAPE, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(win32con.VK_ESCAPE, 0, win32con.KEYEVENTF_KEYUP, 0)
                     
                     # START按钮 - 照相模式 (P键)
                     elif key == 'P':
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(ord('P'), 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(ord('P'), 0, win32con.KEYEVENTF_KEYUP, 0)
                     
                     # 左摇杆按下 - 锁定/取消锁定 (鼠标滚轮)
                     elif key == 'MOUSE_WHEEL':
+                        if not self.is_playing or self.force_stop: return
                         win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, 120, 0)
                         self.non_blocking_sleep(0.05)
                     
                     # 右摇杆按下 - 场景互动 (E键)
                     elif key == 'E':
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(ord('E'), 0, 0, 0)
                         self.non_blocking_sleep(0.05)
+                        if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(ord('E'), 0, win32con.KEYEVENTF_KEYUP, 0)
             
             # 检查是否应该停止
@@ -1203,15 +1252,18 @@ class GameControllerRecorder:
             
             # 处理右摇杆 (视角控制 - 鼠标移动)
             if abs(right_x) > 0.1 or abs(right_y) > 0.1:
+                if not self.is_playing or self.force_stop: return
                 move_x = int(right_x * 15)  # 增加灵敏度
                 move_y = int(right_y * 15)
                 win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, move_x, move_y, 0, 0)
             
             # 处理触发器
             if left_trigger > 0.5:
+                if not self.is_playing or self.force_stop: return
                 # 左触发器 - 棍花展示 (V键)
                 win32api.keybd_event(ord('V'), 0, 0, 0)
                 self.non_blocking_sleep(0.05)
+                if not self.is_playing or self.force_stop: return
                 win32api.keybd_event(ord('V'), 0, win32con.KEYEVENTF_KEYUP, 0)
             
             if right_trigger > 0.5:
@@ -1357,6 +1409,50 @@ class GameControllerRecorder:
         finally:
             # 清理资源
             self.stop_operations()
+    
+    def emergency_stop(self):
+        """紧急停止 - 强制停止所有操作"""
+        print("🚨 紧急停止触发！强制停止所有操作")  # 调试信息
+        print(f"当前状态 - 录制: {self.is_recording}, 播放: {self.is_playing}")  # 调试信息
+        
+        # 强制设置停止标志
+        self.is_recording = False
+        self.is_playing = False
+        self.force_stop = True
+        
+        # 立即释放所有按键
+        self.release_all_keys()
+        
+        # 停止移动控制线程
+        self.stop_movement_thread()
+        
+        # 在UI线程中更新状态
+        self.root.after(0, self.update_ui_after_stop)
+        
+        print("🚨 紧急停止完成")  # 调试信息
+    
+    def update_ui_after_stop(self):
+        """在UI线程中更新停止后的状态"""
+        try:
+            # 更新状态标签
+            if hasattr(self, 'status_label') and self.status_label.winfo_exists():
+                self.status_label.config(text="⏳ 等待操作...")
+            
+            # 恢复按钮状态
+            if hasattr(self, 'record_btn') and self.record_btn.winfo_exists():
+                self.record_btn.config(state='normal', bg="#4CAF50")
+            if hasattr(self, 'play_btn') and self.play_btn.winfo_exists():
+                self.play_btn.config(state='normal', bg="#2196F3")
+            if hasattr(self, 'list_btn') and self.list_btn.winfo_exists():
+                self.list_btn.config(state='normal', bg="#9C27B0")
+            if hasattr(self, 'stop_btn') and self.stop_btn.winfo_exists():
+                self.stop_btn.config(state='disabled', bg="#666666")
+            
+            # 记录日志
+            self.log_message("🚨 紧急停止已执行")
+            
+        except Exception as e:
+            print(f"UI更新错误: {e}")
 
 if __name__ == "__main__":
     app = GameControllerRecorder()
