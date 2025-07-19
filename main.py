@@ -925,50 +925,118 @@ class GameControllerRecorder:
         return sorted(files)
     
     def show_recordings_list(self):
-        """显示录制文件列表"""
+        """显示录制文件列表 - 使用Treeview显示两列数据"""
         recordings = self.get_recordings_list()
         if not recordings:
-            self.log_message("没有找到录制文件！")
+            self.log_message("没有找到录制文件")
             return
         
         # 创建选择窗口
         select_window = tk.Toplevel(self.root)
         select_window.title("选择录制文件")
-        select_window.geometry("400x300")
+        select_window.geometry("600x400")
         select_window.transient(self.root)
         select_window.grab_set()
         
-        # 文件列表
-        listbox = tk.Listbox(select_window, font=("微软雅黑", 10))
-        listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # 设置窗口样式
+        select_window.configure(bg="#1A1A2E")
         
-        for file in recordings:
-            listbox.insert(tk.END, file)
+        # 标题标签
+        title_label = tk.Label(select_window, text="📁 录制文件列表", 
+                              font=("微软雅黑", 12, "bold"), 
+                              fg="#00D4FF", bg="#1A1A2E")
+        title_label.pack(pady=(10, 5))
         
-        # 按钮框架
-        button_frame = ttk.Frame(select_window)
-        button_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        # 创建Treeview框架
+        tree_frame = tk.Frame(select_window, bg="#1A1A2E")
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
-        def play_selected():
-            selection = listbox.curselection()
+        # 创建Treeview
+        tree = ttk.Treeview(tree_frame, columns=("文件名", "创建时间"), show="headings", height=15)
+        
+        # 设置列标题
+        tree.heading("文件名", text="📄 文件名")
+        tree.heading("创建时间", text="🕒 创建时间")
+        
+        # 设置列宽
+        tree.column("文件名", width=350, anchor="w")
+        tree.column("创建时间", width=200, anchor="center")
+        
+        # 设置样式
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Treeview", 
+                       background="#2A2A3E", 
+                       foreground="#FFFFFF", 
+                       fieldbackground="#2A2A3E",
+                       rowheight=25)
+        style.configure("Treeview.Heading", 
+                       background="#3A3A4E", 
+                       foreground="#00D4FF",
+                       font=("微软雅黑", 9, "bold"))
+        
+        # 创建滚动条
+        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        
+        # 布局Treeview和滚动条
+        tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # 获取文件信息并排序
+        file_info_list = []
+        for filename in recordings:
+            file_path = os.path.join(self.recordings_dir, filename)
+            try:
+                # 获取文件创建时间
+                creation_time = os.path.getctime(file_path)
+                creation_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(creation_time))
+                file_info_list.append((filename, creation_time_str, creation_time))
+            except:
+                # 如果获取时间失败，使用文件名作为时间
+                file_info_list.append((filename, "未知时间", 0))
+        
+        # 按创建时间排序，最新的在前面
+        file_info_list.sort(key=lambda x: x[2], reverse=True)
+        
+        # 插入数据到Treeview
+        for filename, creation_time_str, _ in file_info_list:
+            tree.insert("", "end", values=(filename, creation_time_str))
+        
+        # 点击事件处理
+        def on_item_click(event):
+            selection = tree.selection()
             if selection:
-                selected_file = recordings[selection[0]]
+                item = tree.item(selection[0])
+                filename = item['values'][0]  # 第一列是文件名
                 select_window.destroy()
-                self.play_recording(selected_file)
+                self.play_recording(filename)
         
-        def cancel():
-            select_window.destroy()
+        # 双击事件处理
+        def on_item_double_click(event):
+            on_item_click(event)
         
-        ttk.Button(button_frame, text="播放", command=play_selected).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="取消", command=cancel).pack(side=tk.LEFT, padx=5)
+        # 绑定点击事件
+        tree.bind('<ButtonRelease-1>', on_item_click)
+        tree.bind('<Double-Button-1>', on_item_double_click)
+        tree.bind('<Return>', on_item_click)
         
-        # 绑定回车键
-        listbox.bind('<Double-Button-1>', lambda e: play_selected())
-        listbox.bind('<Return>', lambda e: play_selected())
+        # 默认选择第一个文件
+        if tree.get_children():
+            first_item = tree.get_children()[0]
+            tree.selection_set(first_item)
+            tree.focus(first_item)
         
-        # 默认选择第一个
-        if recordings:
-            listbox.selection_set(0)
+        # 关闭按钮
+        close_btn = tk.Button(select_window, text="关闭", 
+                             font=("微软雅黑", 10, "bold"),
+                             fg="#FFFFFF", bg="#666666",
+                             relief="flat", padx=20, pady=5,
+                             command=select_window.destroy)
+        close_btn.pack(pady=10)
+        
+        # 设置窗口焦点
+        select_window.focus_set()
     
     def play_recording(self, filename):
         """播放录制文件"""
