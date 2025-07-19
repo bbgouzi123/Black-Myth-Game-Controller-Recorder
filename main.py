@@ -307,18 +307,21 @@ class GameControllerRecorder:
         """更新移动目标按键（线程安全）"""
         new_target_keys = set()  # 新的目标按键集合
         
+        # 增加摇杆死区，忽略轻微的偏移
+        deadzone = 0.2  # 死区阈值
+        
         # 根据摇杆位置确定需要按下的按键
-        if left_y < -0.1:  # 前进
+        if left_y < -deadzone:  # 前进
             new_target_keys.add('W')
             print(f"摇杆向前 (Y={left_y:.2f}) -> 按下W键")
-        elif left_y > 0.1:  # 后退
+        elif left_y > deadzone:  # 后退
             new_target_keys.add('S')
             print(f"摇杆向后 (Y={left_y:.2f}) -> 按下S键")
         
-        if left_x < -0.1:  # 左移
+        if left_x < -deadzone:  # 左移
             new_target_keys.add('A')
             print(f"摇杆向左 (X={left_x:.2f}) -> 按下A键")
-        elif left_x > 0.1:  # 右移
+        elif left_x > deadzone:  # 右移
             new_target_keys.add('D')
             print(f"摇杆向右 (X={left_x:.2f}) -> 按下D键")
         
@@ -1220,108 +1223,3 @@ class GameControllerRecorder:
             self.log_message(f"发送数据失败: {e}")
     
     def non_blocking_sleep(self, duration):
-        """非阻塞的睡眠，能够响应停止信号"""
-        start_time = time.time()
-        while time.time() - start_time < duration and self.is_playing and not self.force_stop:
-            time.sleep(0.001)  # 每1毫秒检查一次停止状态
-    
-    def stop_playback(self):
-        """停止播放"""
-        print("🛑 停止播放")  # 调试信息
-        self.is_playing = False
-        self.force_stop = False # 确保强制停止标志被重置
-        self.status_label.config(text="⏳ 等待操作...")
-        
-        # 恢复所有按钮状态到正常
-        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
-        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
-        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
-        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
-        
-        # 清理移动控制线程和按键状态
-        self.stop_movement_thread()
-        self.release_all_keys()
-        
-        self.log_message("播放已停止")
-        print("✅ 播放已停止，按钮状态已恢复")  # 调试信息
-    
-    def stop_operations(self):
-        """停止所有操作"""
-        print("🛑 执行停止所有操作")  # 调试信息
-        
-        if self.is_recording:
-            print("停止录制...")  # 调试信息
-            self.stop_recording()
-        
-        if self.is_playing:
-            print("停止播放...")  # 调试信息
-            self.stop_playback()
-        
-        # 停止移动控制线程
-        print("停止移动控制线程...")  # 调试信息
-        self.stop_movement_thread()
-        
-        # 释放所有当前按下的按键，避免按键卡住
-        print("释放所有按键...")  # 调试信息
-        self.release_all_keys()
-        
-        # 重置强制停止标志
-        self.force_stop = False
-        
-        # 恢复所有按钮状态到正常
-        print("恢复按钮状态...")  # 调试信息
-        self.status_label.config(text="⏳ 等待操作...")
-        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
-        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
-        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
-        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
-        
-        self.log_message("操作已停止")
-        print("✅ 所有操作已停止，按钮状态已恢复")  # 调试信息
-    
-
-    
-    def release_all_keys(self):
-        """释放所有当前按下的按键"""
-        try:
-            for key in self.pressed_keys:
-                if key == 'W':
-                    win32api.keybd_event(ord('W'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                elif key == 'S':
-                    win32api.keybd_event(ord('S'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                elif key == 'A':
-                    win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                elif key == 'D':
-                    win32api.keybd_event(ord('D'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                print(f"释放按键: {key}")
-            
-            # 清空按键状态
-            self.pressed_keys.clear()
-            print("所有按键已释放")
-        except Exception as e:
-            print(f"释放按键失败: {e}")
-
-    def run(self):
-        """运行程序"""
-        try:
-            self.root.mainloop()
-        except KeyboardInterrupt:
-            self.stop_operations()
-        finally:
-            # 确保程序退出时停止移动线程并释放所有按键
-            self.stop_movement_thread()
-            self.release_all_keys()
-            if self.keyboard_listener:
-                self.keyboard_listener.stop()
-            pygame.quit()
-
-if __name__ == "__main__":
-    print("程序启动中...")  # 调试信息
-    try:
-        app = GameControllerRecorder()  # 创建应用实例
-        print("应用实例创建成功")  # 调试信息
-        app.run()  # 运行应用
-    except Exception as e:
-        print(f"程序启动失败: {e}")  # 调试信息
-        import traceback
-        traceback.print_exc()  # 打印详细错误信息 
