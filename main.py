@@ -69,6 +69,12 @@ class GameControllerRecorder:
         self.pressed_keys = set()  # 当前按下的按键集合
         self.last_joystick_state = {}  # 上一次摇杆状态，用于检测变化
         
+        # 添加移动控制线程相关变量
+        self.movement_thread = None  # 移动控制线程
+        self.movement_running = False  # 移动线程运行标志
+        self.target_keys = set()  # 目标按键集合（线程安全）
+        self.movement_lock = threading.Lock()  # 线程锁
+        
         self.setup_ui()
         self.setup_global_hotkeys()
         
@@ -115,6 +121,103 @@ class GameControllerRecorder:
             if "Xbox" in joystick.get_name() or "360" in joystick.get_name():  # 检查是否为Xbox手柄
                 print(f"检测到Xbox手柄，强制识别为北通BTP-A2P3A")  # 打印识别信息
                 self.current_joystick_data[joystick.get_id()]['name'] = "北通BTP-A2P3A"  # 强制重命名为北通手柄
+    
+    def start_movement_thread(self):
+        """启动移动控制线程"""
+        if self.movement_thread is None or not self.movement_thread.is_alive():
+            self.movement_running = True  # 设置运行标志
+            self.movement_thread = threading.Thread(target=self.movement_control_loop, daemon=True)  # 创建守护线程
+            self.movement_thread.start()  # 启动线程
+            print("移动控制线程已启动")  # 调试信息
+    
+    def stop_movement_thread(self):
+        """停止移动控制线程"""
+        self.movement_running = False  # 设置停止标志
+        if self.movement_thread and self.movement_thread.is_alive():
+            self.movement_thread.join(timeout=1.0)  # 等待线程结束，最多等待1秒
+            print("移动控制线程已停止")  # 调试信息
+    
+    def movement_control_loop(self):
+        """移动控制线程主循环 - 实现流畅的按键发送"""
+        while self.movement_running:  # 线程运行循环
+            try:
+                with self.movement_lock:  # 获取线程锁
+                    current_target_keys = self.target_keys.copy()  # 复制当前目标按键
+                
+                # 释放不再需要的按键
+                keys_to_release = self.pressed_keys - current_target_keys
+                for key in keys_to_release:
+                    self.release_single_key(key)  # 释放单个按键
+                
+                # 按下新需要的按键
+                keys_to_press = current_target_keys - self.pressed_keys
+                for key in keys_to_press:
+                    self.press_single_key(key)  # 按下单个按键
+                
+                # 更新当前按下的按键状态
+                self.pressed_keys = current_target_keys.copy()
+                
+                # 线程休眠，控制发送频率（60Hz，约16.67ms）
+                time.sleep(0.016)  # 约60FPS的更新频率
+                
+            except Exception as e:
+                print(f"移动控制线程错误: {e}")  # 错误处理
+                time.sleep(0.1)  # 出错时稍微等待
+    
+    def press_single_key(self, key):
+        """按下单个按键"""
+        try:
+            if key == 'W':
+                win32api.keybd_event(ord('W'), 0, 0, 0)
+                print(f"按下按键: {key} - 前进")
+            elif key == 'S':
+                win32api.keybd_event(ord('S'), 0, 0, 0)
+                print(f"按下按键: {key} - 后退")
+            elif key == 'A':
+                win32api.keybd_event(ord('A'), 0, 0, 0)
+                print(f"按下按键: {key} - 左移")
+            elif key == 'D':
+                win32api.keybd_event(ord('D'), 0, 0, 0)
+                print(f"按下按键: {key} - 右移")
+        except Exception as e:
+            print(f"按下按键失败 {key}: {e}")
+    
+    def release_single_key(self, key):
+        """释放单个按键"""
+        try:
+            if key == 'W':
+                win32api.keybd_event(ord('W'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                print(f"释放按键: {key}")
+            elif key == 'S':
+                win32api.keybd_event(ord('S'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                print(f"释放按键: {key}")
+            elif key == 'A':
+                win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                print(f"释放按键: {key}")
+            elif key == 'D':
+                win32api.keybd_event(ord('D'), 0, win32con.KEYEVENTF_KEYUP, 0)
+                print(f"释放按键: {key}")
+        except Exception as e:
+            print(f"释放按键失败 {key}: {e}")
+    
+    def update_movement_target(self, left_x, left_y):
+        """更新移动目标按键（线程安全）"""
+        new_target_keys = set()  # 新的目标按键集合
+        
+        # 根据摇杆位置确定需要按下的按键
+        if left_y < -0.1:  # 前进
+            new_target_keys.add('W')
+        elif left_y > 0.1:  # 后退
+            new_target_keys.add('S')
+        
+        if left_x < -0.1:  # 左移
+            new_target_keys.add('A')
+        elif left_x > 0.1:  # 右移
+            new_target_keys.add('D')
+        
+        # 线程安全地更新目标按键
+        with self.movement_lock:
+            self.target_keys = new_target_keys
     
     def init_virtual_joystick(self):
         """初始化虚拟手柄（用于发送数据到游戏）"""
@@ -924,54 +1027,13 @@ class GameControllerRecorder:
                         win32api.keybd_event(ord('E'), 0, win32con.KEYEVENTF_KEYUP, 0)
                         print("右摇杆按下 - 场景互动")
             
-            # 处理左摇杆移动 (WASD控制) - 使用持续按键实现流畅移动
-            current_keys = set()  # 当前需要按下的按键集合
+            # 处理左摇杆移动 (WASD控制) - 使用线程机制实现流畅移动
+            # 确保移动控制线程已启动
+            if not self.movement_running:
+                self.start_movement_thread()
             
-            # 根据摇杆位置确定需要按下的按键
-            if left_y < -0.1:  # 前进
-                current_keys.add('W')
-            elif left_y > 0.1:  # 后退
-                current_keys.add('S')
-            
-            if left_x < -0.1:  # 左移
-                current_keys.add('A')
-            elif left_x > 0.1:  # 右移
-                current_keys.add('D')
-            
-            # 释放不再需要的按键
-            keys_to_release = self.pressed_keys - current_keys
-            for key in keys_to_release:
-                if key == 'W':
-                    win32api.keybd_event(ord('W'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print(f"释放按键: {key}")
-                elif key == 'S':
-                    win32api.keybd_event(ord('S'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print(f"释放按键: {key}")
-                elif key == 'A':
-                    win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print(f"释放按键: {key}")
-                elif key == 'D':
-                    win32api.keybd_event(ord('D'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print(f"释放按键: {key}")
-            
-            # 按下新需要的按键
-            keys_to_press = current_keys - self.pressed_keys
-            for key in keys_to_press:
-                if key == 'W':
-                    win32api.keybd_event(ord('W'), 0, 0, 0)
-                    print(f"按下按键: {key} - 前进")
-                elif key == 'S':
-                    win32api.keybd_event(ord('S'), 0, 0, 0)
-                    print(f"按下按键: {key} - 后退")
-                elif key == 'A':
-                    win32api.keybd_event(ord('A'), 0, 0, 0)
-                    print(f"按下按键: {key} - 左移")
-                elif key == 'D':
-                    win32api.keybd_event(ord('D'), 0, 0, 0)
-                    print(f"按下按键: {key} - 右移")
-            
-            # 更新当前按下的按键状态
-            self.pressed_keys = current_keys
+            # 更新移动目标按键（线程安全）
+            self.update_movement_target(left_x, left_y)
             
             # 处理右摇杆 (视角控制 - 鼠标移动)
             if abs(right_x) > 0.1 or abs(right_y) > 0.1:
@@ -1035,6 +1097,9 @@ class GameControllerRecorder:
         if self.is_playing:
             self.stop_playback()
         
+        # 停止移动控制线程
+        self.stop_movement_thread()
+        
         # 释放所有当前按下的按键，避免按键卡住
         self.release_all_keys()
         
@@ -1068,7 +1133,8 @@ class GameControllerRecorder:
         except KeyboardInterrupt:
             self.stop_operations()
         finally:
-            # 确保程序退出时释放所有按键
+            # 确保程序退出时停止移动线程并释放所有按键
+            self.stop_movement_thread()
             self.release_all_keys()
             if self.keyboard_listener:
                 self.keyboard_listener.stop()
