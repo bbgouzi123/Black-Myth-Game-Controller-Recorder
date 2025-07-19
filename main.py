@@ -447,10 +447,12 @@ class GameControllerRecorder:
         
         # 停止按钮悬停效果
         def on_stop_enter(e):
-            self.stop_btn.config(bg="#66BB6A")
+            if self.stop_btn['state'] != 'disabled':
+                self.stop_btn.config(bg="#66BB6A")
         
         def on_stop_leave(e):
-            self.stop_btn.config(bg="#96CEB4")
+            if self.stop_btn['state'] != 'disabled':
+                self.stop_btn.config(bg="#96CEB4")
         
         def on_stop_click(e):
             # 点击动画效果
@@ -880,7 +882,14 @@ class GameControllerRecorder:
         
         self.is_playing = True
         self.status_label.config(text=f"🔵 循环播放中: {filename} - 按Shift+F12停止")
+        
+        # 设置按钮状态：禁用录制和播放按钮，但保持停止按钮可用
+        self.record_btn.config(state="disabled", bg="#CCCCCC")
         self.play_btn.config(state="disabled", bg="#CCCCCC")
+        self.list_btn.config(state="disabled", bg="#CCCCCC")
+        # 停止按钮保持可用状态，确保热键和点击都能工作
+        self.stop_btn.config(state="normal", bg="#96CEB4")
+        
         self.log_message(f"开始循环播放: {filename}")
         
         # 启动移动控制线程（确保回放时摇杆移动正常工作）
