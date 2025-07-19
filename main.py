@@ -43,10 +43,6 @@ class GameControllerRecorder:
         self.target_keys = set()  # 目标按键集合
         self.pressed_keys = set()  # 当前按下的按键
         
-        # 虚拟手柄
-        self.vjoy_available = False
-        self.vjoy = None
-        
         # 热键监听器
         self.keyboard_listener = None
         
@@ -62,7 +58,7 @@ class GameControllerRecorder:
         self.init_joysticks()
         
         # 初始化虚拟手柄
-        self.init_virtual_joystick()
+        # self.init_virtual_joystick() # 删除虚拟手柄初始化
         
         # 设置UI
         self.setup_ui()
@@ -120,11 +116,6 @@ class GameControllerRecorder:
                     'hats': [(0, 0)] * joystick.get_numhats()  # 帽子开关数组，初始化为(0,0)
                 }
                 print(f"检测到手柄: {joystick.get_name()}")  # 打印手柄名称
-                
-                # 强制识别为北通BTP-A2P3A
-                if "Xbox" in joystick.get_name() or "360" in joystick.get_name():  # 检查是否为Xbox手柄
-                    print(f"检测到Xbox手柄，强制识别为北通BTP-A2P3A")  # 打印识别信息
-                    self.current_joystick_data[joystick.get_id()]['name'] = "北通BTP-A2P3A"  # 强制重命名为北通手柄
         except Exception as e:
             print(f"手柄初始化失败: {e}")  # 打印错误信息
             self.joysticks = []  # 清空手柄列表
@@ -226,16 +217,16 @@ class GameControllerRecorder:
         with self.movement_lock:
             self.target_keys = new_target_keys
     
-    def init_virtual_joystick(self):
-        """初始化虚拟手柄（用于发送数据到游戏）"""
-        try:
-            # 尝试加载vJoy库
-            self.vjoy = ctypes.CDLL("vJoyInterface.dll")  # 加载vJoy动态链接库
-            self.vjoy_available = True  # 设置vJoy可用标志
-            print("vJoy虚拟手柄可用")  # 打印成功信息
-        except:
-            print("vJoy不可用，将使用键盘模拟")  # 打印失败信息
-            self.vjoy_available = False  # 设置vJoy不可用标志
+    # def init_virtual_joystick(self): # 删除虚拟手柄初始化
+    #     """初始化虚拟手柄（用于发送数据到游戏）"""
+    #     try:
+    #         # 尝试加载vJoy库
+    #         self.vjoy = ctypes.CDLL("vJoyInterface.dll")  # 加载vJoy动态链接库
+    #         self.vjoy_available = True  # 设置vJoy可用标志
+    #         print("vJoy虚拟手柄可用")  # 打印成功信息
+    #     except:
+    #         print("vJoy不可用，将使用键盘模拟")  # 打印失败信息
+    #         self.vjoy_available = False  # 设置vJoy不可用标志
     
     def load_controller_config(self):
         """加载手柄配置文件"""
@@ -961,37 +952,8 @@ class GameControllerRecorder:
             self.current_joystick_data[joystick_id]['buttons'] = buttons
             self.current_joystick_data[joystick_id]['hats'] = hats
         
-        # 发送数据到游戏
-        if self.vjoy_available:
-            self.send_vjoy_data(data)
-        else:
-            self.send_keyboard_mouse_data(data)
-    
-    def send_vjoy_data(self, data):
-        """通过vJoy发送手柄数据"""
-        try:
-            # 这里需要根据具体的vJoy API实现
-            # 由于vJoy需要特定的库和配置，这里提供基本框架
-            joystick_id = data['joystick_id']
-            axes = data['axes']
-            buttons = data['buttons']
-            
-            # 发送轴数据
-            for i, axis_value in enumerate(axes):
-                if i < 8:  # vJoy通常支持8个轴
-                    # self.vjoy.SetAxis(int(axis_value * 16384 + 16384), joystick_id, i + 1)
-                    pass
-            
-            # 发送按钮数据
-            button_mask = 0
-            for i, button in enumerate(buttons):
-                if button and i < 32:  # vJoy通常支持32个按钮
-                    button_mask |= (1 << i)
-            
-            # self.vjoy.SetBtn(button_mask, joystick_id)
-            
-        except Exception as e:
-            print(f"vJoy发送数据失败: {e}")
+        # 直接使用键盘鼠标模拟
+        self.send_keyboard_mouse_data(data)
     
     def send_keyboard_mouse_data(self, data):
         """通过键盘鼠标模拟发送数据 - 基于黑神话游戏操作"""
@@ -1000,7 +962,6 @@ class GameControllerRecorder:
             buttons = data['buttons']
             hats = data['hats']
             
-            # 北通BTP-A2P3A手柄映射
             # 左摇杆 (轴0, 轴1) - 移动控制
             left_x, left_y = axes[0], axes[1] if len(axes) > 1 else 0
             
