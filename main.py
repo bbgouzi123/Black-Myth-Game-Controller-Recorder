@@ -89,6 +89,8 @@ class GameControllerRecorder:
             # 查找该进程的窗口
             import win32gui
             import win32process
+            import win32con
+            import win32api
             
             def enum_windows_callback(hwnd, windows):
                 try:
@@ -115,20 +117,46 @@ class GameControllerRecorder:
             hwnd, window_title = windows[0]
             print(f"找到游戏窗口: {window_title} (句柄: {hwnd})")
             
-            # 激活窗口
+            # 强力激活窗口
             try:
-                # 将窗口带到前台
-                win32gui.ShowWindow(hwnd, 5)  # SW_SHOW
+                # 方法1: 使用AttachThreadInput强制激活
+                current_thread = win32api.GetCurrentThreadId()
+                target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
+                
+                if current_thread != target_thread:
+                    # 附加到目标线程
+                    win32gui.AttachThreadInput(current_thread, target_thread, True)
+                
+                # 方法2: 使用多种激活方式
+                # 显示窗口
+                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                
+                # 设置前台窗口
                 win32gui.SetForegroundWindow(hwnd)
                 
-                # 确保窗口处于活动状态
-                import win32con
+                # 强制激活
+                win32gui.BringWindowToTop(hwnd)
+                
+                # 方法3: 模拟Alt+Tab到该窗口
+                import time
+                time.sleep(0.1)  # 短暂等待
+                
+                # 方法4: 使用SetActiveWindow
+                win32gui.SetActiveWindow(hwnd)
+                
+                # 方法5: 使用SetWindowPos设置到前台
                 win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, 
                                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
                 
                 # 恢复窗口到正常层级（不影响我们的程序置顶）
+                time.sleep(0.1)
                 win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, 
                                     win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
+                
+                # 分离线程输入
+                if current_thread != target_thread:
+                    win32gui.AttachThreadInput(current_thread, target_thread, False)
                 
                 print(f"成功激活游戏窗口: {window_title}")
                 return True
