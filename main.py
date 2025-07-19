@@ -78,8 +78,8 @@ class GameControllerRecorder:
             screen_height = self.root.winfo_screenheight()  # 获取屏幕高度
             
             # 获取窗口尺寸
-            window_width = 300  # 窗口宽度
-            window_height = 300  # 窗口高度
+            window_width = 400  # 窗口宽度
+            window_height = 600  # 窗口高度
             
             # 计算右下角位置（留出更多边距，避免被任务栏遮挡）
             margin_x = 50  # 水平边距
@@ -90,7 +90,11 @@ class GameControllerRecorder:
             # 设置窗口位置
             self.root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
             
+            # 设置窗口置顶
+            self.root.attributes('-topmost', True)
+            
             print(f"窗口已定位到右下角: ({x_position}, {y_position})")  # 调试信息
+            print("窗口已设置为置顶")  # 调试信息
         except Exception as e:
             print(f"设置窗口位置失败: {e}")  # 调试信息
         
@@ -314,14 +318,26 @@ class GameControllerRecorder:
         
         self.stop_btn = tk.Button(button_frame, text="⏹", font=("微软雅黑", 16, "bold"),
                                  bg="#96CEB4", fg="white", relief="raised", bd=2,
-                                 command=self.stop_operations, width=4, height=2,
+                                 command=self.emergency_stop, width=4, height=2,
                                  cursor="hand2")
         self.stop_btn.grid(row=1, column=1, padx=2, pady=2)
         
         # 停止按钮提示
-        stop_tip = tk.Label(button_frame, text="停止\n(Shift+F12)", 
+        stop_tip = tk.Label(button_frame, text="紧急停止\n(Shift+F12)", 
                            font=("微软雅黑", 6), fg="#666666")
         stop_tip.grid(row=1, column=1, padx=(0, 0), pady=(35, 0), sticky="s")
+        
+        # 紧急停止按钮 - 红色，更大更显眼
+        self.emergency_btn = tk.Button(button_frame, text="🚨", font=("微软雅黑", 20, "bold"),
+                                      bg="#FF0000", fg="white", relief="raised", bd=3,
+                                      command=self.emergency_stop, width=6, height=2,
+                                      cursor="hand2")
+        self.emergency_btn.grid(row=2, column=0, columnspan=2, padx=2, pady=5, sticky="ew")
+        
+        # 紧急停止按钮提示
+        emergency_tip = tk.Label(button_frame, text="紧急停止所有操作", 
+                                font=("微软雅黑", 8, "bold"), fg="#FF0000")
+        emergency_tip.grid(row=2, column=0, columnspan=2, padx=(0, 0), pady=(35, 0), sticky="s")
         
         # 添加按钮悬停效果
         self.setup_button_hover_effects()
@@ -465,6 +481,24 @@ class GameControllerRecorder:
         self.stop_btn.bind("<Enter>", on_stop_enter)
         self.stop_btn.bind("<Leave>", on_stop_leave)
         self.stop_btn.bind("<Button-1>", on_stop_click)
+
+        # 紧急停止按钮悬停效果
+        def on_emergency_enter(e):
+            if self.emergency_btn['state'] != 'disabled':
+                self.emergency_btn.config(bg="#FF0000")
+        
+        def on_emergency_leave(e):
+            if self.emergency_btn['state'] != 'disabled':
+                self.emergency_btn.config(bg="#FF0000")
+        
+        def on_emergency_click(e):
+            # 点击动画效果
+            self.emergency_btn.config(relief="sunken")
+            self.root.after(100, lambda: self.emergency_btn.config(relief="raised"))
+        
+        self.emergency_btn.bind("<Enter>", on_emergency_enter)
+        self.emergency_btn.bind("<Leave>", on_emergency_leave)
+        self.emergency_btn.bind("<Button-1>", on_emergency_click)
     
     def setup_global_hotkeys(self):
         """设置全局热键 - 使用Shift+F9-F12组合键"""
@@ -549,20 +583,8 @@ class GameControllerRecorder:
         print("🔥 热键触发：停止所有操作")  # 调试信息
         print(f"当前状态 - 录制: {self.is_recording}, 播放: {self.is_playing}")  # 调试信息
         
-        # 设置强制停止标志
-        self.force_stop = True
-        self.is_recording = False
-        self.is_playing = False
-        
-        # 强制停止移动控制线程
-        self.stop_movement_thread()
-        
-        # 强制释放所有按键
-        self.release_all_keys()
-        
-        # 使用after方法确保在主线程中执行
-        self.root.after(0, self.stop_operations)
-        print("强制停止信号已发送，强制清理完成")  # 调试信息
+        # 直接调用紧急停止
+        self.emergency_stop()
     
     def update_joystick_status(self):
         """更新手柄状态显示"""
@@ -1214,6 +1236,39 @@ class GameControllerRecorder:
         
         self.log_message("操作已停止")
         print("✅ 所有操作已停止，按钮状态已恢复")  # 调试信息
+    
+    def emergency_stop(self):
+        """紧急停止所有操作"""
+        print("🚨 紧急停止触发！")  # 调试信息
+        
+        # 立即设置所有停止标志
+        self.force_stop = True
+        self.is_recording = False
+        self.is_playing = False
+        self.movement_running = False
+        
+        # 强制停止移动控制线程
+        try:
+            if self.movement_thread and self.movement_thread.is_alive():
+                self.movement_thread.join(timeout=0.1)  # 快速等待
+        except:
+            pass
+        
+        # 强制释放所有按键
+        self.release_all_keys()
+        
+        # 立即恢复按钮状态
+        self.status_label.config(text="⏳ 等待操作...")
+        self.record_btn.config(state="normal", bg="#FF6B6B")
+        self.play_btn.config(state="normal", bg="#4ECDC4")
+        self.list_btn.config(state="normal", bg="#45B7D1")
+        self.stop_btn.config(state="normal", bg="#96CEB4")
+        
+        # 重置强制停止标志
+        self.force_stop = False
+        
+        self.log_message("紧急停止已执行")
+        print("✅ 紧急停止完成")  # 调试信息
     
     def release_all_keys(self):
         """释放所有当前按下的按键"""
