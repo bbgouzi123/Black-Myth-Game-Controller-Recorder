@@ -550,9 +550,15 @@ class GameControllerRecorder:
         self.is_recording = False
         self.is_playing = False
         
+        # 强制停止移动控制线程
+        self.stop_movement_thread()
+        
+        # 强制释放所有按键
+        self.release_all_keys()
+        
         # 使用after方法确保在主线程中执行
         self.root.after(0, self.stop_operations)
-        print("停止信号已发送")  # 调试信息
+        print("停止信号已发送，强制清理完成")  # 调试信息
     
     def update_joystick_status(self):
         """更新手柄状态显示"""
@@ -914,12 +920,13 @@ class GameControllerRecorder:
                 data_count = 0  # 调试计数器
                 
                 for data in recording_data:
-                    if not self.is_playing:
+                    # 每10条数据检查一次停止状态
+                    if data_count % 10 == 0 and not self.is_playing:
                         print("检测到停止信号，退出播放循环")  # 调试信息
                         break
                     
                     data_count += 1
-                    if data_count % 100 == 0:  # 每100条数据显示一次进度
+                    if data_count % 500 == 0:  # 每500条数据显示一次进度
                         print(f"播放进度: {data_count}/{len(recording_data)}")  # 调试信息
                     
                     # 等待到指定时间，但更频繁地检查停止状态
@@ -960,18 +967,6 @@ class GameControllerRecorder:
         buttons = data['buttons']
         hats = data['hats']
         
-        # 调试信息：显示有意义的输入
-        has_input = False
-        if any(abs(axis) > 0.1 for axis in axes):
-            has_input = True
-        if any(button for button in buttons):
-            has_input = True
-        if any(hat != (0, 0) for hat in hats):
-            has_input = True
-        
-        if has_input:
-            print(f"发送数据 - 手柄{joystick_id}: 轴={[f'{a:.2f}' for a in axes[:4]]}, 按钮={[i for i, b in enumerate(buttons) if b]}, 帽子={hats}")  # 调试信息
-        
         # 更新当前手柄数据显示
         if joystick_id in self.current_joystick_data:
             self.current_joystick_data[joystick_id]['axes'] = axes
@@ -980,10 +975,8 @@ class GameControllerRecorder:
         
         # 发送数据到游戏
         if self.vjoy_available:
-            print("使用vJoy发送数据")  # 调试信息
             self.send_vjoy_data(data)
         else:
-            print("使用键盘鼠标模拟发送数据")  # 调试信息
             self.send_keyboard_mouse_data(data)
     
     def send_vjoy_data(self, data):
@@ -1019,8 +1012,6 @@ class GameControllerRecorder:
             buttons = data['buttons']
             hats = data['hats']
             
-            print(f"处理数据: 轴={[f'{a:.2f}' for a in axes[:4]]}, 按钮={[i for i, b in enumerate(buttons) if b]}, 帽子={hats}")  # 调试信息
-            
             # 北通BTP-A2P3A手柄映射
             # 左摇杆 (轴0, 轴1) - 移动控制
             left_x, left_y = axes[0], axes[1] if len(axes) > 1 else 0
@@ -1037,97 +1028,80 @@ class GameControllerRecorder:
                 for btn_id, btn_info in self.controller_config['button_mapping'].items():
                     button_mapping[int(btn_id)] = btn_info.get('key', btn_info.get('name', ''))
             
-            print(f"按钮映射: {button_mapping}")  # 调试信息
-            
             # 处理按钮 - 黑神话游戏按键映射
             for i, button in enumerate(buttons):
                 if button and i in button_mapping:
                     key = button_mapping[i]
-                    print(f"按钮{i}按下，映射到: {key}")  # 调试信息
                     
                     # 检查是否应该停止
                     if not self.is_playing:
-                        print("检测到停止信号，跳过按钮处理")  # 调试信息
                         break
                     
                     # A按钮 - 跳跃 (空格键)
                     if key == 'SPACE':
                         win32api.keybd_event(win32con.VK_SPACE, 0, 0, 0)
-                        # 使用非阻塞的等待
                         self.non_blocking_sleep(0.05)
                         win32api.keybd_event(win32con.VK_SPACE, 0, win32con.KEYEVENTF_KEYUP, 0)
-                        print("A按钮 - 跳跃")
                     
                     # B按钮 - 翻滚/闪身 (Ctrl键)
                     elif key == 'CTRL':
                         win32api.keybd_event(win32con.VK_CONTROL, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.keybd_event(win32con.VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
-                        print("B按钮 - 翻滚/闪身")
                     
                     # X按钮 - 轻攻击 (鼠标左键)
                     elif key == 'MOUSE_LEFT':
                         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
-                        print("X按钮 - 轻攻击")
                     
                     # Y按钮 - 重攻击 (鼠标右键)
                     elif key == 'MOUSE_RIGHT':
                         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
-                        print("Y按钮 - 重攻击")
                     
                     # LB按钮 - 饮酒 (R键)
                     elif key == 'R':
                         win32api.keybd_event(ord('R'), 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.keybd_event(ord('R'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                        print("LB按钮 - 饮酒")
                     
                     # RB按钮 - 疾奔 (Shift键)
                     elif key == 'SHIFT':
                         win32api.keybd_event(win32con.VK_SHIFT, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.keybd_event(win32con.VK_SHIFT, 0, win32con.KEYEVENTF_KEYUP, 0)
-                        print("RB按钮 - 疾奔")
                     
                     # BACK按钮 - 菜单 (ESC键)
                     elif key == 'ESC':
                         win32api.keybd_event(win32con.VK_ESCAPE, 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.keybd_event(win32con.VK_ESCAPE, 0, win32con.KEYEVENTF_KEYUP, 0)
-                        print("BACK按钮 - 菜单")
                     
                     # START按钮 - 照相模式 (P键)
                     elif key == 'P':
                         win32api.keybd_event(ord('P'), 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.keybd_event(ord('P'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                        print("START按钮 - 照相模式")
                     
                     # 左摇杆按下 - 锁定/取消锁定 (鼠标滚轮)
                     elif key == 'MOUSE_WHEEL':
                         win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, 120, 0)
                         self.non_blocking_sleep(0.05)
-                        print("左摇杆按下 - 锁定/取消锁定")
                     
                     # 右摇杆按下 - 场景互动 (E键)
                     elif key == 'E':
                         win32api.keybd_event(ord('E'), 0, 0, 0)
                         self.non_blocking_sleep(0.05)
                         win32api.keybd_event(ord('E'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                        print("右摇杆按下 - 场景互动")
             
             # 检查是否应该停止
             if not self.is_playing:
-                print("检测到停止信号，跳过摇杆处理")  # 调试信息
                 return
             
             # 处理左摇杆移动 (WASD控制) - 使用线程机制实现流畅移动
             if abs(left_x) > 0.1 or abs(left_y) > 0.1:
-                print(f"左摇杆移动: ({left_x:.2f}, {left_y:.2f})")  # 调试信息
                 # 确保移动控制线程已启动
                 if not self.movement_running:
                     self.start_movement_thread()
@@ -1140,7 +1114,6 @@ class GameControllerRecorder:
                 move_x = int(right_x * 15)  # 增加灵敏度
                 move_y = int(right_y * 15)
                 win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, move_x, move_y, 0, 0)
-                print(f"右摇杆 - 视角移动: ({move_x}, {move_y})")
             
             # 处理触发器
             if left_trigger > 0.5:
@@ -1148,36 +1121,30 @@ class GameControllerRecorder:
                 win32api.keybd_event(ord('V'), 0, 0, 0)
                 self.non_blocking_sleep(0.05)
                 win32api.keybd_event(ord('V'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                print("左触发器 - 棍花展示")
             
             if right_trigger > 0.5:
                 # 右触发器 - 法术释放 (需要配合方向键)
-                print("右触发器 - 法术释放")
+                pass
             
             # 处理帽子开关 (方向键) - 法术选择
             if hats and hats[0] != (0, 0):
                 hat_x, hat_y = hats[0]
-                print(f"帽子开关: ({hat_x}, {hat_y})")  # 调试信息
                 if hat_y == -1:  # 上 - 法术1
                     win32api.keybd_event(ord('1'), 0, 0, 0)
                     self.non_blocking_sleep(0.05)
                     win32api.keybd_event(ord('1'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("方向键上 - 法术1")
                 elif hat_y == 1:  # 下 - 法术3
                     win32api.keybd_event(ord('3'), 0, 0, 0)
                     self.non_blocking_sleep(0.05)
                     win32api.keybd_event(ord('3'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("方向键下 - 法术3")
                 elif hat_x == -1:  # 左 - 法术4
                     win32api.keybd_event(ord('4'), 0, 0, 0)
                     self.non_blocking_sleep(0.05)
                     win32api.keybd_event(ord('4'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("方向键左 - 法术4")
                 elif hat_x == 1:  # 右 - 法术2
                     win32api.keybd_event(ord('2'), 0, 0, 0)
                     self.non_blocking_sleep(0.05)
                     win32api.keybd_event(ord('2'), 0, win32con.KEYEVENTF_KEYUP, 0)
-                    print("方向键右 - 法术2")
                     
         except Exception as e:
             print(f"键盘鼠标模拟失败: {e}")
