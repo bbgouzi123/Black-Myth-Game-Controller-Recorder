@@ -310,13 +310,17 @@ class GameControllerRecorder:
         # 根据摇杆位置确定需要按下的按键
         if left_y < -0.1:  # 前进
             new_target_keys.add('W')
+            print(f"摇杆向前 (Y={left_y:.2f}) -> 按下W键")
         elif left_y > 0.1:  # 后退
             new_target_keys.add('S')
+            print(f"摇杆向后 (Y={left_y:.2f}) -> 按下S键")
         
         if left_x < -0.1:  # 左移
             new_target_keys.add('A')
+            print(f"摇杆向左 (X={left_x:.2f}) -> 按下A键")
         elif left_x > 0.1:  # 右移
             new_target_keys.add('D')
+            print(f"摇杆向右 (X={left_x:.2f}) -> 按下D键")
         
         # 线程安全地更新目标按键
         with self.movement_lock:
@@ -1082,6 +1086,10 @@ class GameControllerRecorder:
             
             # 触发器 (轴4, 轴5)
             left_trigger, right_trigger = axes[4], axes[5] if len(axes) > 5 else 0
+            
+            # 调试信息：显示摇杆数据
+            if abs(left_x) > 0.1 or abs(left_y) > 0.1:
+                print(f"摇杆数据 - X: {left_x:.2f}, Y: {left_y:.2f}")
             
             # 使用配置文件中的按钮映射
             button_mapping = {}
