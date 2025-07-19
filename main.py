@@ -72,7 +72,29 @@ class GameControllerRecorder:
         self.setup_ui()
         self.setup_global_hotkeys()
         
-
+    def set_window_position(self):
+        """设置窗口位置在屏幕右下角"""
+        try:
+            # 获取屏幕尺寸
+            screen_width = self.root.winfo_screenwidth()  # 获取屏幕宽度
+            screen_height = self.root.winfo_screenheight()  # 获取屏幕高度
+            
+            # 获取窗口尺寸
+            window_width = 300  # 窗口宽度
+            window_height = 300  # 窗口高度
+            
+            # 计算右下角位置（留出更多边距，避免被任务栏遮挡）
+            margin_x = 50  # 水平边距
+            margin_y = 80  # 垂直边距（给任务栏留空间）
+            x_position = screen_width - window_width - margin_x  # X坐标
+            y_position = screen_height - window_height - margin_y  # Y坐标
+            
+            # 设置窗口位置
+            self.root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
+            
+            print(f"窗口已定位到右下角: ({x_position}, {y_position})")  # 调试信息
+        except Exception as e:
+            print(f"设置窗口位置失败: {e}")  # 调试信息
         
     def init_joysticks(self):
         """初始化手柄"""
