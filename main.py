@@ -541,8 +541,16 @@ class GameControllerRecorder:
     
     def hotkey_stop_operations(self):
         """热键回调：停止所有操作"""
-        print("热键触发：停止所有操作")  # 调试信息
+        print("🔥 热键触发：停止所有操作")  # 调试信息
+        print(f"当前状态 - 录制: {self.is_recording}, 播放: {self.is_playing}")  # 调试信息
+        
+        # 立即设置停止标志
+        self.is_recording = False
+        self.is_playing = False
+        
+        # 使用after方法确保在主线程中执行
         self.root.after(0, self.stop_operations)
+        print("停止信号已发送")  # 调试信息
     
     def update_joystick_status(self):
         """更新手柄状态显示"""
@@ -890,18 +898,24 @@ class GameControllerRecorder:
                 
                 for data in recording_data:
                     if not self.is_playing:
+                        print("检测到停止信号，退出播放循环")  # 调试信息
                         break
                     
                     data_count += 1
                     if data_count % 100 == 0:  # 每100条数据显示一次进度
                         print(f"播放进度: {data_count}/{len(recording_data)}")  # 调试信息
                     
-                    # 等待到指定时间
+                    # 等待到指定时间，但更频繁地检查停止状态
                     target_time = data['time']
-                    while time.time() - start_time < target_time and self.is_playing:
-                        time.sleep(0.001)
+                    current_time = time.time() - start_time
+                    
+                    # 将等待时间分成更小的片段，每0.001秒检查一次停止状态
+                    while current_time < target_time and self.is_playing:
+                        time.sleep(0.001)  # 减少到0.001秒
+                        current_time = time.time() - start_time
                     
                     if not self.is_playing:
+                        print("检测到停止信号，退出数据循环")  # 调试信息
                         break
                     
                     # 发送手柄数据到游戏
@@ -911,6 +925,8 @@ class GameControllerRecorder:
                 if self.is_playing:
                     print("播放完成，开始循环播放...")  # 调试信息
                     self.log_message("播放完成，开始循环播放...")
+                else:
+                    print("播放已停止，退出循环")  # 调试信息
             
             # 播放结束
             self.stop_playback()
@@ -1153,20 +1169,27 @@ class GameControllerRecorder:
     
     def stop_operations(self):
         """停止所有操作"""
+        print("🛑 执行停止所有操作")  # 调试信息
+        
         if self.is_recording:
+            print("停止录制...")  # 调试信息
             self.stop_recording()
         
         if self.is_playing:
+            print("停止播放...")  # 调试信息
             self.stop_playback()
         
         # 停止移动控制线程
+        print("停止移动控制线程...")  # 调试信息
         self.stop_movement_thread()
         
         # 释放所有当前按下的按键，避免按键卡住
+        print("释放所有按键...")  # 调试信息
         self.release_all_keys()
         
         self.status_label.config(text="⏳ 等待操作...")
         self.log_message("操作已停止")
+        print("✅ 所有操作已停止")  # 调试信息
     
     def release_all_keys(self):
         """释放所有当前按下的按键"""
