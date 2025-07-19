@@ -883,12 +883,18 @@ class GameControllerRecorder:
             return
         
         try:
+            print(f"开始播放，数据条数: {len(recording_data)}")  # 调试信息
             while self.is_playing:  # 循环播放
                 start_time = time.time()
+                data_count = 0  # 调试计数器
                 
                 for data in recording_data:
                     if not self.is_playing:
                         break
+                    
+                    data_count += 1
+                    if data_count % 100 == 0:  # 每100条数据显示一次进度
+                        print(f"播放进度: {data_count}/{len(recording_data)}")  # 调试信息
                     
                     # 等待到指定时间
                     target_time = data['time']
@@ -903,6 +909,7 @@ class GameControllerRecorder:
                 
                 # 如果还在播放状态，继续下一轮循环
                 if self.is_playing:
+                    print("播放完成，开始循环播放...")  # 调试信息
                     self.log_message("播放完成，开始循环播放...")
             
             # 播放结束
@@ -920,6 +927,18 @@ class GameControllerRecorder:
         buttons = data['buttons']
         hats = data['hats']
         
+        # 调试信息：显示有意义的输入
+        has_input = False
+        if any(abs(axis) > 0.1 for axis in axes):
+            has_input = True
+        if any(button for button in buttons):
+            has_input = True
+        if any(hat != (0, 0) for hat in hats):
+            has_input = True
+        
+        if has_input:
+            print(f"发送数据 - 手柄{joystick_id}: 轴={[f'{a:.2f}' for a in axes[:4]]}, 按钮={[i for i, b in enumerate(buttons) if b]}, 帽子={hats}")  # 调试信息
+        
         # 更新当前手柄数据显示
         if joystick_id in self.current_joystick_data:
             self.current_joystick_data[joystick_id]['axes'] = axes
@@ -928,8 +947,10 @@ class GameControllerRecorder:
         
         # 发送数据到游戏
         if self.vjoy_available:
+            print("使用vJoy发送数据")  # 调试信息
             self.send_vjoy_data(data)
         else:
+            print("使用键盘鼠标模拟发送数据")  # 调试信息
             self.send_keyboard_mouse_data(data)
     
     def send_vjoy_data(self, data):
@@ -965,6 +986,8 @@ class GameControllerRecorder:
             buttons = data['buttons']
             hats = data['hats']
             
+            print(f"处理数据: 轴={[f'{a:.2f}' for a in axes[:4]]}, 按钮={[i for i, b in enumerate(buttons) if b]}, 帽子={hats}")  # 调试信息
+            
             # 北通BTP-A2P3A手柄映射
             # 左摇杆 (轴0, 轴1) - 移动控制
             left_x, left_y = axes[0], axes[1] if len(axes) > 1 else 0
@@ -981,10 +1004,13 @@ class GameControllerRecorder:
                 for btn_id, btn_info in self.controller_config['button_mapping'].items():
                     button_mapping[int(btn_id)] = btn_info.get('key', btn_info.get('name', ''))
             
+            print(f"按钮映射: {button_mapping}")  # 调试信息
+            
             # 处理按钮 - 黑神话游戏按键映射
             for i, button in enumerate(buttons):
                 if button and i in button_mapping:
                     key = button_mapping[i]
+                    print(f"按钮{i}按下，映射到: {key}")  # 调试信息
                     
                     # A按钮 - 跳跃 (空格键)
                     if key == 'SPACE':
@@ -1056,12 +1082,14 @@ class GameControllerRecorder:
                         print("右摇杆按下 - 场景互动")
             
             # 处理左摇杆移动 (WASD控制) - 使用线程机制实现流畅移动
-            # 确保移动控制线程已启动
-            if not self.movement_running:
-                self.start_movement_thread()
-            
-            # 更新移动目标按键（线程安全）
-            self.update_movement_target(left_x, left_y)
+            if abs(left_x) > 0.1 or abs(left_y) > 0.1:
+                print(f"左摇杆移动: ({left_x:.2f}, {left_y:.2f})")  # 调试信息
+                # 确保移动控制线程已启动
+                if not self.movement_running:
+                    self.start_movement_thread()
+                
+                # 更新移动目标按键（线程安全）
+                self.update_movement_target(left_x, left_y)
             
             # 处理右摇杆 (视角控制 - 鼠标移动)
             if abs(right_x) > 0.1 or abs(right_y) > 0.1:
@@ -1085,6 +1113,7 @@ class GameControllerRecorder:
             # 处理帽子开关 (方向键) - 法术选择
             if hats and hats[0] != (0, 0):
                 hat_x, hat_y = hats[0]
+                print(f"帽子开关: ({hat_x}, {hat_y})")  # 调试信息
                 if hat_y == -1:  # 上 - 法术1
                     win32api.keybd_event(ord('1'), 0, 0, 0)
                     time.sleep(0.05)
