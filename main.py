@@ -96,23 +96,34 @@ class GameControllerRecorder:
         
     def init_joysticks(self):
         """初始化手柄"""
-        joystick_count = pygame.joystick.get_count()  # 获取连接的手柄数量
-        for i in range(joystick_count):  # 遍历所有手柄
-            joystick = pygame.joystick.Joystick(i)  # 创建手柄对象
-            joystick.init()  # 初始化手柄
-            self.joysticks.append(joystick)  # 添加到手柄列表
-            self.current_joystick_data[joystick.get_id()] = {  # 初始化手柄数据字典
-                'name': joystick.get_name(),  # 手柄名称
-                'axes': [0.0] * joystick.get_numaxes(),  # 轴数据数组，初始化为0
-                'buttons': [False] * joystick.get_numbuttons(),  # 按钮状态数组，初始化为False
-                'hats': [(0, 0)] * joystick.get_numhats()  # 帽子开关数组，初始化为(0,0)
-            }
-            print(f"检测到手柄: {joystick.get_name()}")  # 打印手柄名称
+        try:
+            pygame.init()  # 初始化pygame
+            pygame.joystick.init()  # 初始化手柄系统
             
-            # 强制识别为北通BTP-A2P3A
-            if "Xbox" in joystick.get_name() or "360" in joystick.get_name():  # 检查是否为Xbox手柄
-                print(f"检测到Xbox手柄，强制识别为北通BTP-A2P3A")  # 打印识别信息
-                self.current_joystick_data[joystick.get_id()]['name'] = "北通BTP-A2P3A"  # 强制重命名为北通手柄
+            joystick_count = pygame.joystick.get_count()  # 获取连接的手柄数量
+            print(f"检测到 {joystick_count} 个手柄")  # 打印手柄数量
+            
+            for i in range(joystick_count):  # 遍历所有手柄
+                joystick = pygame.joystick.Joystick(i)  # 创建手柄对象
+                joystick.init()  # 初始化手柄
+                self.joysticks.append(joystick)  # 添加到手柄列表
+                
+                # 初始化手柄数据
+                self.current_joystick_data[joystick.get_id()] = {
+                    'name': joystick.get_name(),  # 手柄名称
+                    'axes': [0.0] * joystick.get_numaxes(),  # 轴数据数组，初始化为0
+                    'buttons': [False] * joystick.get_numbuttons(),  # 按钮状态数组，初始化为False
+                    'hats': [(0, 0)] * joystick.get_numhats()  # 帽子开关数组，初始化为(0,0)
+                }
+                print(f"检测到手柄: {joystick.get_name()}")  # 打印手柄名称
+                
+                # 强制识别为北通BTP-A2P3A
+                if "Xbox" in joystick.get_name() or "360" in joystick.get_name():  # 检查是否为Xbox手柄
+                    print(f"检测到Xbox手柄，强制识别为北通BTP-A2P3A")  # 打印识别信息
+                    self.current_joystick_data[joystick.get_id()]['name'] = "北通BTP-A2P3A"  # 强制重命名为北通手柄
+        except Exception as e:
+            print(f"手柄初始化失败: {e}")  # 打印错误信息
+            self.joysticks = []  # 清空手柄列表
     
     def start_movement_thread(self):
         """启动移动控制线程"""
