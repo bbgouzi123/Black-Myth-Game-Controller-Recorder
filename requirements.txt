@@ -1,5 +1,5 @@
-pygame==2.6.1
-pywin32==306
-keyboard==0.13.5
-pynput==1.7.6
-psutil==7.0.0
+pygame
+pywin32
+keyboard
+pynput
+psutil
