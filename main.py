@@ -359,8 +359,8 @@ class GameControllerRecorder:
     
     def setup_ui(self):
         """设置用户界面"""
-        # 主框架 - 美化背景
-        main_frame = tk.Frame(self.root, bg="#F5F5F5", relief="flat", bd=0)
+        # 主框架 - 科技感背景
+        main_frame = tk.Frame(self.root, bg="#1A1A2E", relief="flat", bd=0)
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
         # 配置网格权重
@@ -369,133 +369,145 @@ class GameControllerRecorder:
         main_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(3, weight=1)
         
-        # 标题 - 美化样式
-        title_frame = tk.Frame(main_frame, bg="#2C3E50", relief="raised", bd=1)
-        title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        # 标题 - 科技感样式
+        title_frame = tk.Frame(main_frame, bg="#16213E", relief="flat", bd=0)
+        title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         title_frame.columnconfigure(0, weight=1)
         
         title_label = tk.Label(title_frame, text="🎮 黑神话手柄录制器", 
-                              font=("微软雅黑", 12, "bold"), 
-                              bg="#2C3E50", fg="white", pady=5)
+                              font=("微软雅黑", 14, "bold"), 
+                              bg="#16213E", fg="#00D4FF", pady=8)
         title_label.grid(row=0, column=0)
         
-        # 控制按钮框架 - 2x2布局，美化背景
-        button_frame = tk.Frame(main_frame, bg="#F5F5F5", relief="flat", bd=0)
-        button_frame.grid(row=1, column=0, pady=(0, 5))
+        # 控制按钮框架 - 一行四个按钮，科技感背景
+        button_frame = tk.Frame(main_frame, bg="#1A1A2E", relief="flat", bd=0)
+        button_frame.grid(row=1, column=0, pady=(0, 10))
         
-        # 第一行按钮 - 使用图标和颜色
-        self.record_btn = tk.Button(button_frame, text="⏺", font=("微软雅黑", 16, "bold"),
-                                   bg="#FF6B6B", fg="white", relief="raised", bd=2,
-                                   command=self.start_recording, width=4, height=2,
-                                   cursor="hand2")
-        self.record_btn.grid(row=0, column=0, padx=2, pady=2)
+        # 配置按钮框架的列权重，让按钮均匀分布
+        for i in range(4):
+            button_frame.columnconfigure(i, weight=1)
+        
+        # 录制按钮 - 科技感红色
+        self.record_btn = tk.Button(button_frame, text="⏺", font=("微软雅黑", 18, "bold"),
+                                   bg="#FF2E63", fg="white", relief="flat", bd=0,
+                                   command=self.start_recording, width=3, height=2,
+                                   cursor="hand2", activebackground="#FF1744",
+                                   activeforeground="white")
+        self.record_btn.grid(row=0, column=0, padx=3, pady=3, sticky="ew")
         
         # 录制按钮提示
-        record_tip = tk.Label(button_frame, text="录制\n(Shift+F9)", 
-                             font=("微软雅黑", 6), fg="#666666")
-        record_tip.grid(row=0, column=0, padx=(0, 0), pady=(35, 0), sticky="s")
+        record_tip = tk.Label(button_frame, text="录制\nShift+F9", 
+                             font=("微软雅黑", 7, "bold"), fg="#FF6B9D", bg="#1A1A2E")
+        record_tip.grid(row=1, column=0, pady=(2, 0))
         
-        self.play_btn = tk.Button(button_frame, text="▶", font=("微软雅黑", 16, "bold"),
-                                 bg="#4ECDC4", fg="white", relief="raised", bd=2,
-                                 command=self.play_latest_recording, width=4, height=2,
-                                 cursor="hand2")
-        self.play_btn.grid(row=0, column=1, padx=2, pady=2)
+        # 播放按钮 - 科技感青色
+        self.play_btn = tk.Button(button_frame, text="▶", font=("微软雅黑", 18, "bold"),
+                                 bg="#08D9D6", fg="white", relief="flat", bd=0,
+                                 command=self.play_latest_recording, width=3, height=2,
+                                 cursor="hand2", activebackground="#00BCD4",
+                                 activeforeground="white")
+        self.play_btn.grid(row=0, column=1, padx=3, pady=3, sticky="ew")
         
         # 播放按钮提示
-        play_tip = tk.Label(button_frame, text="循环最近一次\n(Shift+F10)", 
-                           font=("微软雅黑", 6), fg="#666666")
-        play_tip.grid(row=0, column=1, padx=(0, 0), pady=(35, 0), sticky="s")
+        play_tip = tk.Label(button_frame, text="循环最近一次\nShift+F10", 
+                           font=("微软雅黑", 7, "bold"), fg="#4ECDC4", bg="#1A1A2E")
+        play_tip.grid(row=1, column=1, pady=(2, 0))
         
-        # 第二行按钮
-        self.list_btn = tk.Button(button_frame, text="📁", font=("微软雅黑", 16, "bold"),
-                                 bg="#45B7D1", fg="white", relief="raised", bd=2,
-                                 command=self.show_recordings_list, width=4, height=2,
-                                 cursor="hand2")
-        self.list_btn.grid(row=1, column=0, padx=2, pady=2)
+        # 选择按钮 - 科技感蓝色
+        self.list_btn = tk.Button(button_frame, text="📁", font=("微软雅黑", 18, "bold"),
+                                 bg="#252A34", fg="#00D4FF", relief="flat", bd=0,
+                                 command=self.show_recordings_list, width=3, height=2,
+                                 cursor="hand2", activebackground="#1976D2",
+                                 activeforeground="white")
+        self.list_btn.grid(row=0, column=2, padx=3, pady=3, sticky="ew")
         
         # 选择按钮提示
-        list_tip = tk.Label(button_frame, text="选择", 
-                           font=("微软雅黑", 6), fg="#666666")
-        list_tip.grid(row=1, column=0, padx=(0, 0), pady=(35, 0), sticky="s")
+        list_tip = tk.Label(button_frame, text="选择文件", 
+                           font=("微软雅黑", 7, "bold"), fg="#45B7D1", bg="#1A1A2E")
+        list_tip.grid(row=1, column=2, pady=(2, 0))
         
-        self.stop_btn = tk.Button(button_frame, text="⏹", font=("微软雅黑", 16, "bold"),
-                                 bg="#96CEB4", fg="white", relief="raised", bd=2,
-                                 command=self.stop_operations, width=4, height=2,
-                                 cursor="hand2")
-        self.stop_btn.grid(row=1, column=1, padx=2, pady=2)
+        # 停止按钮 - 科技感橙色
+        self.stop_btn = tk.Button(button_frame, text="⏹", font=("微软雅黑", 18, "bold"),
+                                 bg="#FF9F43", fg="white", relief="flat", bd=0,
+                                 command=self.stop_operations, width=3, height=2,
+                                 cursor="hand2", activebackground="#FF7043",
+                                 activeforeground="white")
+        self.stop_btn.grid(row=0, column=3, padx=3, pady=3, sticky="ew")
         
         # 停止按钮提示
         stop_tip = tk.Label(button_frame, text="停止", 
-                           font=("微软雅黑", 6), fg="#666666")
-        stop_tip.grid(row=1, column=1, padx=(0, 0), pady=(35, 0), sticky="s")
+                           font=("微软雅黑", 7, "bold"), fg="#FFB74D", bg="#1A1A2E")
+        stop_tip.grid(row=1, column=3, pady=(2, 0))
         
         # 设置按钮悬停效果
         self.setup_button_hover_effects()
         
-
-        
-        # 状态显示 - 美化样式
-        status_frame = tk.Frame(main_frame, bg="#F8F9FA", relief="sunken", bd=1)
-        status_frame.grid(row=2, column=0, pady=(0, 5), sticky="ew")
+        # 状态显示 - 科技感样式
+        status_frame = tk.Frame(main_frame, bg="#16213E", relief="flat", bd=1)
+        status_frame.grid(row=2, column=0, pady=(0, 10), sticky="ew")
         status_frame.columnconfigure(0, weight=1)
         
         # 状态标签
         self.status_label = tk.Label(status_frame, text="⏳ 等待操作...", 
-                                    font=("微软雅黑", 9), bg="#F8F9FA", fg="#2C3E50")
-        self.status_label.grid(row=0, column=0, sticky=tk.W, padx=5, pady=2)
+                                    font=("微软雅黑", 9, "bold"), bg="#16213E", fg="#00D4FF")
+        self.status_label.grid(row=0, column=0, sticky=tk.W, padx=8, pady=4)
         
         # 手柄状态显示
         self.joystick_status = tk.Label(status_frame, text="🎮 手柄状态: 未连接", 
-                                       font=("微软雅黑", 8), bg="#F8F9FA", fg="#7F8C8D")
-        self.joystick_status.grid(row=1, column=0, sticky=tk.W, padx=5, pady=2)
+                                       font=("微软雅黑", 8), bg="#16213E", fg="#FF6B9D")
+        self.joystick_status.grid(row=1, column=0, sticky=tk.W, padx=8, pady=2)
         
         # 进度条显示
         self.progress_label = tk.Label(status_frame, text="", 
-                                      font=("微软雅黑", 7), bg="#F8F9FA", fg="#27AE60")
-        self.progress_label.grid(row=2, column=0, sticky=tk.W, padx=5, pady=2)
+                                      font=("微软雅黑", 7), bg="#16213E", fg="#08D9D6")
+        self.progress_label.grid(row=2, column=0, sticky=tk.W, padx=8, pady=2)
         
-        # 手柄实时数据显示 - 美化样式
-        joystick_frame = tk.Frame(main_frame, bg="#E8F5E8", relief="raised", bd=1)
-        joystick_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 2))
+        # 手柄实时数据显示 - 科技感样式
+        joystick_frame = tk.Frame(main_frame, bg="#0F3460", relief="flat", bd=1)
+        joystick_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 5))
         joystick_frame.columnconfigure(0, weight=1)
         joystick_frame.rowconfigure(1, weight=1)
         
         # 手柄数据标题
         joystick_title = tk.Label(joystick_frame, text="📊 手柄数据", 
-                                 font=("微软雅黑", 8, "bold"), 
-                                 bg="#4CAF50", fg="white", pady=2)
+                                 font=("微软雅黑", 9, "bold"), 
+                                 bg="#0F3460", fg="#00D4FF", pady=4)
         joystick_title.grid(row=0, column=0, sticky="ew")
         
         self.joystick_data_text = scrolledtext.ScrolledText(joystick_frame, height=3, 
-                                                           font=("Consolas", 7),
-                                                           bg="#F1F8E9", fg="#2E7D32")
-        self.joystick_data_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=2, pady=2)
+                                                           font=("Consolas", 8),
+                                                           bg="#1A1A2E", fg="#08D9D6",
+                                                           insertbackground="#00D4FF",
+                                                           selectbackground="#FF2E63")
+        self.joystick_data_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=3, pady=3)
         
-        # 操作日志 - 美化样式
-        log_frame = tk.Frame(main_frame, bg="#FFF3E0", relief="raised", bd=1)
+        # 操作日志 - 科技感样式
+        log_frame = tk.Frame(main_frame, bg="#0F3460", relief="flat", bd=1)
         log_frame.grid(row=4, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(1, weight=1)
         
         # 日志标题
         log_title = tk.Label(log_frame, text="📝 操作日志", 
-                            font=("微软雅黑", 8, "bold"), 
-                            bg="#FF9800", fg="white", pady=2)
+                            font=("微软雅黑", 9, "bold"), 
+                            bg="#0F3460", fg="#00D4FF", pady=4)
         log_title.grid(row=0, column=0, sticky="ew")
         
         self.log_text = scrolledtext.ScrolledText(log_frame, height=3, 
-                                                 font=("微软雅黑", 7),
-                                                 bg="#FFF8E1", fg="#E65100")
-        self.log_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=2, pady=2)
+                                                 font=("微软雅黑", 8),
+                                                 bg="#1A1A2E", fg="#FF6B9D",
+                                                 insertbackground="#00D4FF",
+                                                 selectbackground="#FF2E63")
+        self.log_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=3, pady=3)
         
-        # 底部信息 - 美化样式
-        info_frame = tk.Frame(main_frame, bg="#E3F2FD", relief="sunken", bd=1)
-        info_frame.grid(row=5, column=0, sticky="ew", pady=(2, 0))
+        # 底部信息 - 科技感样式
+        info_frame = tk.Frame(main_frame, bg="#16213E", relief="flat", bd=1)
+        info_frame.grid(row=5, column=0, sticky="ew", pady=(5, 0))
         info_frame.columnconfigure(0, weight=1)
         
         info_label = tk.Label(info_frame, text="💾 录制文件保存在 recordings 文件夹中", 
-                             font=("微软雅黑", 7), bg="#E3F2FD", fg="#1565C0")
-        info_label.grid(row=0, column=0, pady=3)
+                             font=("微软雅黑", 8), bg="#16213E", fg="#08D9D6")
+        info_label.grid(row=0, column=0, pady=4)
         
         self.update_joystick_status()
         self.update_joystick_data_display()
@@ -505,16 +517,16 @@ class GameControllerRecorder:
         # 录制按钮悬停效果
         def on_record_enter(e):
             if self.record_btn['state'] != 'disabled':
-                self.record_btn.config(bg="#FF5252")
+                self.record_btn.config(bg="#FF1744", relief="raised", bd=2)
         
         def on_record_leave(e):
             if self.record_btn['state'] != 'disabled':
-                self.record_btn.config(bg="#FF6B6B")
+                self.record_btn.config(bg="#FF2E63", relief="flat", bd=0)
         
         def on_record_click(e):
             # 点击动画效果
-            self.record_btn.config(relief="sunken")
-            self.root.after(100, lambda: self.record_btn.config(relief="raised"))
+            self.record_btn.config(relief="sunken", bd=2)
+            self.root.after(100, lambda: self.record_btn.config(relief="flat", bd=0))
         
         self.record_btn.bind("<Enter>", on_record_enter)
         self.record_btn.bind("<Leave>", on_record_leave)
@@ -523,16 +535,16 @@ class GameControllerRecorder:
         # 播放按钮悬停效果
         def on_play_enter(e):
             if self.play_btn['state'] != 'disabled':
-                self.play_btn.config(bg="#26A69A")
+                self.play_btn.config(bg="#00BCD4", relief="raised", bd=2)
         
         def on_play_leave(e):
             if self.play_btn['state'] != 'disabled':
-                self.play_btn.config(bg="#4ECDC4")
+                self.play_btn.config(bg="#08D9D6", relief="flat", bd=0)
         
         def on_play_click(e):
             # 点击动画效果
-            self.play_btn.config(relief="sunken")
-            self.root.after(100, lambda: self.play_btn.config(relief="raised"))
+            self.play_btn.config(relief="sunken", bd=2)
+            self.root.after(100, lambda: self.play_btn.config(relief="flat", bd=0))
         
         self.play_btn.bind("<Enter>", on_play_enter)
         self.play_btn.bind("<Leave>", on_play_leave)
@@ -540,15 +552,15 @@ class GameControllerRecorder:
         
         # 选择按钮悬停效果
         def on_list_enter(e):
-            self.list_btn.config(bg="#1976D2")
+            self.list_btn.config(bg="#1976D2", relief="raised", bd=2)
         
         def on_list_leave(e):
-            self.list_btn.config(bg="#45B7D1")
+            self.list_btn.config(bg="#252A34", relief="flat", bd=0)
         
         def on_list_click(e):
             # 点击动画效果
-            self.list_btn.config(relief="sunken")
-            self.root.after(100, lambda: self.list_btn.config(relief="raised"))
+            self.list_btn.config(relief="sunken", bd=2)
+            self.root.after(100, lambda: self.list_btn.config(relief="flat", bd=0))
         
         self.list_btn.bind("<Enter>", on_list_enter)
         self.list_btn.bind("<Leave>", on_list_leave)
@@ -557,16 +569,16 @@ class GameControllerRecorder:
         # 停止按钮悬停效果
         def on_stop_enter(e):
             if self.stop_btn['state'] != 'disabled':
-                self.stop_btn.config(bg="#66BB6A")
+                self.stop_btn.config(bg="#FF7043", relief="raised", bd=2)
         
         def on_stop_leave(e):
             if self.stop_btn['state'] != 'disabled':
-                self.stop_btn.config(bg="#96CEB4")
+                self.stop_btn.config(bg="#FF9F43", relief="flat", bd=0)
         
         def on_stop_click(e):
             # 点击动画效果
-            self.stop_btn.config(relief="sunken")
-            self.root.after(100, lambda: self.stop_btn.config(relief="raised"))
+            self.stop_btn.config(relief="sunken", bd=2)
+            self.root.after(100, lambda: self.stop_btn.config(relief="flat", bd=0))
         
         self.stop_btn.bind("<Enter>", on_stop_enter)
         self.stop_btn.bind("<Leave>", on_stop_leave)
@@ -819,7 +831,7 @@ class GameControllerRecorder:
         self.current_recording_file = f"recording_{timestamp}.json"  # 设置当前录制文件名
         
         self.status_label.config(text="🔴 录制中... 按Shift+F12停止录制")  # 更新状态标签
-        self.record_btn.config(state="disabled", bg="#CCCCCC")  # 禁用录制按钮
+        self.record_btn.config(state="disabled", bg="#4A4A4A")  # 禁用录制按钮
         self.log_message("开始录制手柄操作")  # 记录日志
         
         # 启动录制线程
@@ -883,10 +895,10 @@ class GameControllerRecorder:
         self.status_label.config(text="⏳ 等待操作...")
         
         # 恢复所有按钮状态到正常
-        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
-        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
-        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
-        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
+        self.record_btn.config(state="normal", bg="#FF2E63")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#08D9D6")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#252A34")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#FF9F43")    # 恢复停止按钮
         
         print("✅ 录制已停止，按钮状态已恢复")  # 调试信息
     
@@ -986,11 +998,11 @@ class GameControllerRecorder:
         self.status_label.config(text=f"🔵 循环播放中: {filename} - 按Shift+F12停止")
         
         # 设置按钮状态：禁用录制和播放按钮，但保持停止按钮可用
-        self.record_btn.config(state="disabled", bg="#CCCCCC")
-        self.play_btn.config(state="disabled", bg="#CCCCCC")
-        self.list_btn.config(state="disabled", bg="#CCCCCC")
+        self.record_btn.config(state="disabled", bg="#4A4A4A")
+        self.play_btn.config(state="disabled", bg="#4A4A4A")
+        self.list_btn.config(state="disabled", bg="#4A4A4A")
         # 停止按钮保持可用状态，确保热键和点击都能工作
-        self.stop_btn.config(state="normal", bg="#96CEB4")
+        self.stop_btn.config(state="normal", bg="#FF9F43")
         
         self.log_message(f"开始循环播放: {filename}")
         
@@ -1235,10 +1247,10 @@ class GameControllerRecorder:
         self.status_label.config(text="⏳ 等待操作...")
         
         # 恢复所有按钮状态到正常
-        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
-        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
-        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
-        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
+        self.record_btn.config(state="normal", bg="#FF2E63")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#08D9D6")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#252A34")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#FF9F43")    # 恢复停止按钮
         
         # 清理移动控制线程和按键状态
         self.stop_movement_thread()
@@ -1273,10 +1285,10 @@ class GameControllerRecorder:
         # 恢复所有按钮状态到正常
         print("恢复按钮状态...")  # 调试信息
         self.status_label.config(text="⏳ 等待操作...")
-        self.record_btn.config(state="normal", bg="#FF6B6B")  # 恢复录制按钮
-        self.play_btn.config(state="normal", bg="#4ECDC4")    # 恢复播放按钮
-        self.list_btn.config(state="normal", bg="#45B7D1")    # 恢复列表按钮
-        self.stop_btn.config(state="normal", bg="#96CEB4")    # 恢复停止按钮
+        self.record_btn.config(state="normal", bg="#FF2E63")  # 恢复录制按钮
+        self.play_btn.config(state="normal", bg="#08D9D6")    # 恢复播放按钮
+        self.list_btn.config(state="normal", bg="#252A34")    # 恢复列表按钮
+        self.stop_btn.config(state="normal", bg="#FF9F43")    # 恢复停止按钮
         
         self.log_message("操作已停止")
         print("✅ 所有操作已停止，按钮状态已恢复")  # 调试信息
