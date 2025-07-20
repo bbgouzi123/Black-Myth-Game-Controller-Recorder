@@ -50,29 +50,64 @@ HOTKEY_RECORD = 0x78  # F9
 HOTKEY_REPLAY = 0x79  # F10
 HOTKEY_STOP = 0x7A    # F11
 
-# 手柄信息采集线程
-class GamepadReader(threading.Thread):
-    def __init__(self, update_callback):
+# 高帧率定时快照录制线程
+class GamepadRecorder(threading.Thread):
+    def __init__(self, update_callback, record_callback, interval=0.005):
         super().__init__()
         self.update_callback = update_callback
-        self.running = True
+        self.record_callback = record_callback
+        self.interval = interval
+        self.running = False
+        self.recording = False
+        self.paused = False
         self.daemon = True
+        self.last_state = {'ABS_HAT0X': 0, 'ABS_HAT0Y': 0}  # 保证方向键有初始值
 
     def run(self):
+        self.running = True
         while self.running:
             try:
                 events = get_gamepad()
-                info = {}
+                hat0x_updated = False
+                hat0y_updated = False
                 for event in events:
-                    info[event.code] = event.state
-                if info:
-                    self.update_callback(info)
+                    self.last_state[event.code] = event.state
+                    if event.code == 'ABS_HAT0X':
+                        hat0x_updated = True
+                    if event.code == 'ABS_HAT0Y':
+                        hat0y_updated = True
+                # 强制补全方向键状态
+                if 'ABS_HAT0X' not in self.last_state:
+                    self.last_state['ABS_HAT0X'] = 0
+                if 'ABS_HAT0Y' not in self.last_state:
+                    self.last_state['ABS_HAT0Y'] = 0
+                # 每帧都写入方向键状态
+                state_copy = self.last_state.copy()
+                state_copy['ABS_HAT0X'] = self.last_state['ABS_HAT0X']
+                state_copy['ABS_HAT0Y'] = self.last_state['ABS_HAT0Y']
+                self.update_callback(state_copy)
+                if self.recording and not self.paused:
+                    self.record_callback(state_copy)
             except Exception:
                 pass
-            time.sleep(0.01)
+            time.sleep(self.interval)
 
     def stop(self):
         self.running = False
+
+    def start_record(self):
+        self.recording = True
+        self.paused = False
+
+    def pause_record(self):
+        self.paused = True
+
+    def resume_record(self):
+        self.paused = False
+
+    def stop_record(self):
+        self.recording = False
+        self.paused = False
 
 # 可拖动的 QTextEdit
 class DraggableTextEdit(QTextEdit):
@@ -146,8 +181,9 @@ class MainWindow(QWidget):
         self.status = {'record': '未录制', 'replay': '未回放', 'stop': '空闲'}
         self.update_status()
         self.gamepad_info = {}
-        self.reader = GamepadReader(self.update_gamepad_info)
-        self.reader.start()
+        self.recorded_data = []
+        self.recorder = GamepadRecorder(self.update_gamepad_info, self.record_gamepad_data)
+        self.recorder.start()
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh_ui)
         self.timer.start(100)
@@ -295,8 +331,10 @@ class MainWindow(QWidget):
 
     def update_gamepad_info(self, info):
         self.gamepad_info = info
+
+    def record_gamepad_data(self, state):
         if is_recording and not is_paused:
-            recorded_data.append({'ts': time.time(), 'data': info})
+            self.recorded_data.append({'ts': time.time(), 'data': state})
 
     def log(self, msg):
         now = datetime.now().strftime('%H:%M:%S')
@@ -337,7 +375,7 @@ class MainWindow(QWidget):
         self.label_status.setText(f"模式: {mode}{rec_time}{replay_info}{file_info}")
 
     def handle_record(self):
-        global is_recording, is_paused, recorded_data, is_replaying
+        global is_recording, is_paused, is_replaying
         if is_replaying:
             is_replaying = False
             self.log('回放被F9中断，进入录制')
@@ -345,20 +383,24 @@ class MainWindow(QWidget):
             self.refresh_signal.emit()
             is_recording = True
             is_paused = False
-            recorded_data = []
+            self.recorded_data = []
             self.record_start_time = time.time()
+            self.recorder.start_record()
             return
         if not is_recording:
             is_recording = True
             is_paused = False
-            recorded_data = []
+            self.recorded_data = []
             self.record_start_time = time.time()
+            self.recorder.start_record()
             self.log('开始录制手柄数据')
         elif is_recording and not is_paused:
             is_paused = True
+            self.recorder.pause_record()
             self.log('录制已暂停')
         elif is_recording and is_paused:
             is_paused = False
+            self.recorder.resume_record()
             self.log('继续录制')
         self.update_status()
 
@@ -390,6 +432,7 @@ class MainWindow(QWidget):
             self.save_recording()
             is_recording = False
             is_paused = False
+            self.recorder.stop_record()
             self.log('录制已保存并停止')
             self.record_start_time = None
         if is_replaying:
@@ -404,11 +447,11 @@ class MainWindow(QWidget):
         self.update_status()
 
     def save_recording(self):
-        if recorded_data:
+        if self.recorded_data:
             filename = datetime.now().strftime('%Y-%m-%d-%H%M%S') + '.json'
             path = os.path.join(RECORDINGS_DIR, filename)
             with open(path, 'w', encoding='utf-8') as f:
-                json.dump(recorded_data, f, ensure_ascii=False, indent=2)
+                json.dump(self.recorded_data, f, ensure_ascii=False, indent=2)
             self.log(f'录制数据已保存: {filename}')
 
     def get_latest_recording(self):
@@ -456,23 +499,38 @@ class MainWindow(QWidget):
             self.replay_total = len(data)
             gamepad = vgamepad.VX360Gamepad()
             self.replay_start_time = time.time()
+            if not data:
+                return
+            base_ts = data[0]['ts']
+            t0 = time.perf_counter()
+            idx = 0
             while is_replaying:
-                for idx, entry in enumerate(data):
-                    if not is_replaying:
+                now = time.perf_counter()
+                # 计算应播放到第几帧
+                while idx < len(data):
+                    target_time = t0 + (data[idx]['ts'] - base_ts)
+                    if now < target_time:
                         break
+                    # 推送数据到虚拟手柄
                     self.replay_index = idx
-                    # 解析并写入虚拟手柄
-                    self.send_to_vgamepad(gamepad, entry['data'])
+                    self.send_to_vgamepad(gamepad, data[idx]['data'])
                     gamepad.update()
-                    # 按录制时的时间间隔sleep
-                    if idx < len(data) - 1:
-                        dt = data[idx + 1]['ts'] - entry['ts']
-                        if dt < 0: dt = 0
-                        time.sleep(dt)
                     self.refresh_signal.emit()
-                if is_replaying:
-                    self.log('回放完成，循环再次回放...')
-                    self.refresh_signal.emit()
+                    idx += 1
+                if idx >= len(data):
+                    if is_replaying:
+                        self.log('回放完成，循环再次回放...')
+                        self.refresh_signal.emit()
+                        idx = 0
+                        t0 = time.perf_counter()
+                    else:
+                        break
+                # 精确sleep到下一帧
+                if idx < len(data):
+                    next_target = t0 + (data[idx]['ts'] - base_ts)
+                    sleep_time = max(0, next_target - time.perf_counter())
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
             gamepad.reset()
             gamepad.update()
         except Exception as e:
@@ -483,9 +541,6 @@ class MainWindow(QWidget):
         self.refresh_signal.emit()
 
     def send_to_vgamepad(self, gamepad, info):
-        # 这里只做常见按键和摇杆映射，按需扩展
-        # info: {code: value, ...}
-        # 按钮映射示例
         btn_map = {
             'BTN_SOUTH': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A,
             'BTN_EAST': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_B,
@@ -497,10 +552,6 @@ class MainWindow(QWidget):
             'BTN_START': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_START,
             'BTN_THUMBL': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_THUMB,
             'BTN_THUMBR': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_THUMB,
-            'DPAD_UP': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP,
-            'DPAD_DOWN': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN,
-            'DPAD_LEFT': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT,
-            'DPAD_RIGHT': vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT,
         }
         # 先清空所有按钮
         gamepad.reset()
@@ -508,6 +559,47 @@ class MainWindow(QWidget):
         for k, v in info.items():
             if k in btn_map and v:
                 gamepad.press_button(button=btn_map[k])
+        # D-Pad方向键映射（用整数，兼容所有vgamepad版本）
+        hat_x = info.get('ABS_HAT0X', 0)
+        hat_y = info.get('ABS_HAT0Y', 0)
+        dpad = 0  # NEUTRAL
+        if hat_x == -1 and hat_y == 0:
+            dpad = 4  # LEFT
+        elif hat_x == 1 and hat_y == 0:
+            dpad = 2  # RIGHT
+        elif hat_x == 0 and hat_y == -1:
+            dpad = 1  # UP
+        elif hat_x == 0 and hat_y == 1:
+            dpad = 3  # DOWN
+        elif hat_x == -1 and hat_y == -1:
+            dpad = 8  # UP_LEFT
+        elif hat_x == 1 and hat_y == -1:
+            dpad = 5  # UP_RIGHT
+        elif hat_x == -1 and hat_y == 1:
+            dpad = 7  # DOWN_LEFT
+        elif hat_x == 1 and hat_y == 1:
+            dpad = 6  # DOWN_RIGHT
+        print(f'DPAD: {dpad}, HAT0X: {hat_x}, HAT0Y: {hat_y}')  # 调试输出
+        gamepad._dpad_direction = dpad
+        # 兼容性增强：同步用左摇杆推送D-Pad方向
+        if dpad == 1:  # UP
+            gamepad.left_joystick(x_value=0, y_value=-32768)
+        elif dpad == 3:  # DOWN
+            gamepad.left_joystick(x_value=0, y_value=32767)
+        elif dpad == 4:  # LEFT
+            gamepad.left_joystick(x_value=-32768, y_value=0)
+        elif dpad == 2:  # RIGHT
+            gamepad.left_joystick(x_value=32767, y_value=0)
+        elif dpad == 8:  # UP_LEFT
+            gamepad.left_joystick(x_value=-32768, y_value=-32768)
+        elif dpad == 5:  # UP_RIGHT
+            gamepad.left_joystick(x_value=32767, y_value=-32768)
+        elif dpad == 7:  # DOWN_LEFT
+            gamepad.left_joystick(x_value=-32768, y_value=32767)
+        elif dpad == 6:  # DOWN_RIGHT
+            gamepad.left_joystick(x_value=32767, y_value=32767)
+        else:
+            gamepad.left_joystick(x_value=0, y_value=0)
         # 摇杆
         lx = info.get('ABS_X', 0)
         ly = info.get('ABS_Y', 0)
@@ -542,7 +634,7 @@ class MainWindow(QWidget):
         return super().eventFilter(obj, event)
 
     def closeEvent(self, event):
-        self.reader.stop()
+        self.recorder.stop()
         self.unregister_hotkeys()
         event.accept()
 
