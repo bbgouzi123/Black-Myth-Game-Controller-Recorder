@@ -179,7 +179,7 @@ class GameControllerRecorder:
         self.record_btn.grid(row=0, column=0, padx=3, pady=3, sticky="ew")
         
         # 录制按钮提示
-        record_tip = tk.Label(button_frame, text="录制\nF1", 
+        record_tip = tk.Label(button_frame, text="录制\nF9", 
                              font=("微软雅黑", 7, "bold"), fg="#FF6B9D", bg="#1A1A2E")
         record_tip.grid(row=1, column=0, pady=(2, 0))
         
@@ -192,7 +192,7 @@ class GameControllerRecorder:
         self.play_btn.grid(row=0, column=1, padx=3, pady=3, sticky="ew")
         
         # 播放按钮提示
-        play_tip = tk.Label(button_frame, text="播放\nF2", 
+        play_tip = tk.Label(button_frame, text="播放\nF10", 
                            font=("微软雅黑", 7, "bold"), fg="#64B5F6", bg="#1A1A2E")
         play_tip.grid(row=1, column=1, pady=(2, 0))
         
@@ -205,7 +205,7 @@ class GameControllerRecorder:
         self.list_btn.grid(row=0, column=2, padx=3, pady=3, sticky="ew")
         
         # 选择按钮提示
-        list_tip = tk.Label(button_frame, text="选择文件\nF3", 
+        list_tip = tk.Label(button_frame, text="选择文件\nF11", 
                            font=("微软雅黑", 7, "bold"), fg="#45B7D1", bg="#1A1A2E")
         list_tip.grid(row=1, column=2, pady=(2, 0))
         
@@ -218,7 +218,7 @@ class GameControllerRecorder:
         self.stop_btn.grid(row=0, column=3, padx=3, pady=3, sticky="ew")
         
         # 停止按钮提示
-        stop_tip = tk.Label(button_frame, text="停止\nF4", 
+        stop_tip = tk.Label(button_frame, text="停止\nF12", 
                            font=("微软雅黑", 7, "bold"), fg="#FFB74D", bg="#1A1A2E")
         stop_tip.grid(row=1, column=3, pady=(2, 0))
         
@@ -372,21 +372,21 @@ class GameControllerRecorder:
         self.stop_btn.bind("<Button-1>", on_stop_click)
     
     def setup_global_hotkeys(self):
-        """设置全局热键 - F1-F4四个快捷键"""
+        """设置全局热键 - F9-F12四个快捷键"""
         try:
             import keyboard as kb
             
             # 注册全局热键
-            kb.add_hotkey('f1', self.hotkey_start_recording, suppress=True)
-            kb.add_hotkey('f2', self.hotkey_play_latest, suppress=True)
-            kb.add_hotkey('f3', self.hotkey_show_list, suppress=True)
-            kb.add_hotkey('f4', self.hotkey_stop_operations, suppress=True)
+            kb.add_hotkey('f9', self.hotkey_start_recording, suppress=True)
+            kb.add_hotkey('f10', self.hotkey_play_latest, suppress=True)
+            kb.add_hotkey('f11', self.hotkey_show_list, suppress=True)
+            kb.add_hotkey('f12', self.hotkey_stop_operations, suppress=True)
             
-            print("全局热键已注册: F1-F4")
-            print("F1: 开始录制")
-            print("F2: 循环最近一次")
-            print("F3: 显示录制列表")
-            print("F4: 停止所有操作")
+            print("全局热键已注册: F9-F12")
+            print("F9: 开始录制")
+            print("F10: 循环最近一次")
+            print("F11: 显示录制列表")
+            print("F12: 停止所有操作")
             
         except ImportError:
             print("keyboard库不可用，使用pynput热键")
@@ -396,17 +396,17 @@ class GameControllerRecorder:
                 def on_key_press(key):
                     try:
                         print(f"检测到按键: {key}")
-                        if key == keyboard.Key.f1:
-                            print("触发F1 - 开始录制")
+                        if key == keyboard.Key.f9:
+                            print("触发F9 - 开始录制")
                             self.root.after(0, self.start_recording)
-                        elif key == keyboard.Key.f2:
-                            print("触发F2 - 循环最近一次")
+                        elif key == keyboard.Key.f10:
+                            print("触发F10 - 循环最近一次")
                             self.root.after(0, self.play_latest_recording)
-                        elif key == keyboard.Key.f3:
-                            print("触发F3 - 显示录制列表")
+                        elif key == keyboard.Key.f11:
+                            print("触发F11 - 显示录制列表")
                             self.root.after(0, self.show_recordings_list)
-                        elif key == keyboard.Key.f4:
-                            print("触发F4 - 停止所有操作")
+                        elif key == keyboard.Key.f12:
+                            print("触发F12 - 停止所有操作")
                             self.root.after(0, self.stop_operations)
                                 
                     except AttributeError as e:
@@ -703,7 +703,7 @@ class GameControllerRecorder:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.current_recording_file = f"recording_{timestamp}.json"
         
-        self.status_label.config(text="🔴 录制中... 按F4停止录制")
+        self.status_label.config(text="🔴 录制中... 按F12停止录制")
         self.record_btn.config(state="disabled", bg="#4A4A4A")
         self.log_message("开始录制手柄操作")
         
@@ -934,7 +934,7 @@ class GameControllerRecorder:
             return
         
         self.is_playing = True
-        self.status_label.config(text=f"🔵 循环播放中: {filename} - 按F4停止")
+        self.status_label.config(text=f"🔵 循环播放中: {filename} - 按F12停止")
         
         # 设置按钮状态
         self.record_btn.config(state="disabled", bg="#4A4A4A")
