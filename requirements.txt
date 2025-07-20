@@ -3,3 +3,4 @@ pywin32
 inputs
 psutil 
 vgamepad 
+pyvjoy
