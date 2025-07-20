@@ -1172,7 +1172,7 @@ class GameControllerRecorder:
                 return
             
             # 处理左摇杆移动 (WASD控制) - 使用线程机制实现流畅移动
-            if abs(left_x) > 0.05 or abs(left_y) > 0.05:  # 提高灵敏度，从0.1改为0.05
+            if abs(left_x) > 0.02 or abs(left_y) > 0.02:  # 进一步提高灵敏度，从0.05改为0.02
                 # 确保移动控制线程已启动
                 if not self.movement_running:
                     self.start_movement_thread()
@@ -1181,10 +1181,10 @@ class GameControllerRecorder:
                 self.update_movement_target(left_x, left_y, rb_pressed)
             
             # 处理右摇杆 (视角控制 - 鼠标移动)
-            if abs(right_x) > 0.05 or abs(right_y) > 0.05:  # 提高灵敏度，从0.1改为0.05
+            if abs(right_x) > 0.02 or abs(right_y) > 0.02:  # 进一步提高灵敏度，从0.05改为0.02
                 if not self.is_playing or self.force_stop: return
-                move_x = int(right_x * 15)  # 增加灵敏度
-                move_y = int(right_y * 15)
+                move_x = int(right_x * 20)  # 进一步增加灵敏度，从15改为20
+                move_y = int(right_y * 20)
                 win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, move_x, move_y, 0, 0)
             
             # 处理触发器
@@ -1264,8 +1264,8 @@ class GameControllerRecorder:
                 # 更新当前按下的按键状态
                 self.pressed_keys = current_target_keys.copy()
                 
-                # 线程休眠，控制发送频率（120Hz，约8.33ms，提高响应速度）
-                time.sleep(0.008)
+                # 线程休眠，控制发送频率（240Hz，约4.17ms，进一步提高响应速度）
+                time.sleep(0.004)
                 
             except Exception as e:
                 print(f"移动控制线程错误: {e}")
@@ -1277,17 +1277,27 @@ class GameControllerRecorder:
         """按下单个按键"""
         try:
             if key == 'W':
+                # 使用更快的按键发送方式
                 win32api.keybd_event(ord('W'), 0, 0, 0)
-                print(f"按下按键: {key} - 前进")
+                # 添加短暂延迟后再次发送，模拟更快的按键重复
+                time.sleep(0.001)
+                win32api.keybd_event(ord('W'), 0, 0, 0)
+                print(f"按下按键: {key} - 前进 (快速模式)")
             elif key == 'S':
                 win32api.keybd_event(ord('S'), 0, 0, 0)
-                print(f"按下按键: {key} - 后退")
+                time.sleep(0.001)
+                win32api.keybd_event(ord('S'), 0, 0, 0)
+                print(f"按下按键: {key} - 后退 (快速模式)")
             elif key == 'A':
                 win32api.keybd_event(ord('A'), 0, 0, 0)
-                print(f"按下按键: {key} - 左移")
+                time.sleep(0.001)
+                win32api.keybd_event(ord('A'), 0, 0, 0)
+                print(f"按下按键: {key} - 左移 (快速模式)")
             elif key == 'D':
                 win32api.keybd_event(ord('D'), 0, 0, 0)
-                print(f"按下按键: {key} - 右移")
+                time.sleep(0.001)
+                win32api.keybd_event(ord('D'), 0, 0, 0)
+                print(f"按下按键: {key} - 右移 (快速模式)")
             elif key == 'SHIFT':
                 win32api.keybd_event(win32con.VK_SHIFT, 0, 0, 0)
                 print(f"按下按键: {key} - 疾奔加速")
@@ -1319,8 +1329,8 @@ class GameControllerRecorder:
         """更新移动目标按键（线程安全）"""
         new_target_keys = set()
         
-        # 减小摇杆死区，提高灵敏度
-        deadzone = 0.05  # 减小死区阈值，从0.2改为0.05
+        # 进一步减小摇杆死区，提高灵敏度
+        deadzone = 0.02  # 进一步减小死区阈值，从0.05改为0.02
         
         # 计算摇杆强度（用于调试）
         stick_magnitude = (left_x**2 + left_y**2)**0.5
