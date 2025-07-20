@@ -695,6 +695,9 @@ class GameControllerRecorder:
         if self.is_playing:
             self.stop_operations()
         
+        # 重置强制停止标志，确保新的录制能够正常启动
+        self.force_stop = False
+        
         self.is_recording = True
         self.recording_data = []
         self.recording_start_time = time.time()
@@ -920,6 +923,9 @@ class GameControllerRecorder:
         
         if self.is_recording:
             self.stop_recording()
+        
+        # 重置强制停止标志，确保新的播放能够正常启动
+        self.force_stop = False
         
         file_path = os.path.join(self.recordings_dir, filename)
         if not os.path.exists(file_path):
