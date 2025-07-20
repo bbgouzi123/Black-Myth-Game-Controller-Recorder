@@ -376,11 +376,11 @@ class GameControllerRecorder:
         try:
             import keyboard as kb
             
-            # 注册全局热键
-            kb.add_hotkey('f9', self.hotkey_start_recording, suppress=True)
-            kb.add_hotkey('f10', self.hotkey_play_latest, suppress=True)
-            kb.add_hotkey('f11', self.hotkey_show_list, suppress=True)
-            kb.add_hotkey('f12', self.hotkey_stop_operations, suppress=True)
+            # 注册全局热键 - 移除suppress=True以避免干扰
+            kb.add_hotkey('f9', self.hotkey_start_recording, suppress=False)
+            kb.add_hotkey('f10', self.hotkey_play_latest, suppress=False)
+            kb.add_hotkey('f11', self.hotkey_show_list, suppress=False)
+            kb.add_hotkey('f12', self.hotkey_stop_operations, suppress=False)
             
             print("全局热键已注册: F9-F12")
             print("F9: 开始录制")
@@ -553,6 +553,15 @@ class GameControllerRecorder:
             self.progress_label.config(text=progress_text)
         else:
             self.progress_label.config(text="")
+        
+        # 备用F12检测机制 - 在主线程中检测F12按键
+        try:
+            if win32api.GetAsyncKeyState(win32con.VK_F12) & 0x8000:
+                if self.is_recording or self.is_playing:
+                    print("备用机制检测到F12按键，执行停止操作")
+                    self.stop_operations()
+        except:
+            pass
         
         self.root.after(100, self.update_joystick_status)
     
@@ -981,13 +990,19 @@ class GameControllerRecorder:
                     if data_count % 500 == 0:
                         print(f"播放进度: {data_count}/{len(recording_data)}")
                     
+                    # 每处理10条数据就额外检查一次停止状态
+                    if data_count % 10 == 0:
+                        if not self.is_playing or self.force_stop:
+                            print("检测到停止信号，退出数据循环")
+                            break
+                    
                     # 等待到指定时间，但更频繁地检查停止状态
                     target_time = data['time']
                     current_time = time.time() - start_time
                     
-                    # 将等待时间分成更小的片段，每0.0001秒检查一次停止状态
+                    # 将等待时间分成更小的片段，每0.001秒检查一次停止状态
                     while current_time < target_time and self.is_playing and not self.force_stop:
-                        time.sleep(0.0001)
+                        time.sleep(0.001)  # 增加检查频率
                         current_time = time.time() - start_time
                     
                     if not self.is_playing or self.force_stop:
@@ -1220,8 +1235,13 @@ class GameControllerRecorder:
     
     def movement_control_loop(self):
         """移动控制线程主循环 - 实现流畅的按键发送"""
-        while self.movement_running:
+        while self.movement_running and not self.force_stop:
             try:
+                # 检查是否应该停止
+                if not self.is_playing or self.force_stop:
+                    print("移动控制线程检测到停止信号，退出循环")
+                    break
+                
                 with self.movement_lock:
                     current_target_keys = self.target_keys.copy()
                 
@@ -1244,6 +1264,8 @@ class GameControllerRecorder:
             except Exception as e:
                 print(f"移动控制线程错误: {e}")
                 time.sleep(0.1)
+        
+        print("移动控制线程已退出")
     
     def press_single_key(self, key):
         """按下单个按键"""
