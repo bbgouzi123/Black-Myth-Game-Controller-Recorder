@@ -1172,7 +1172,7 @@ class GameControllerRecorder:
                 return
             
             # 处理左摇杆移动 (WASD控制) - 使用线程机制实现流畅移动
-            if abs(left_x) > 0.1 or abs(left_y) > 0.1:
+            if abs(left_x) > 0.05 or abs(left_y) > 0.05:  # 提高灵敏度，从0.1改为0.05
                 # 确保移动控制线程已启动
                 if not self.movement_running:
                     self.start_movement_thread()
@@ -1181,7 +1181,7 @@ class GameControllerRecorder:
                 self.update_movement_target(left_x, left_y, rb_pressed)
             
             # 处理右摇杆 (视角控制 - 鼠标移动)
-            if abs(right_x) > 0.1 or abs(right_y) > 0.1:
+            if abs(right_x) > 0.05 or abs(right_y) > 0.05:  # 提高灵敏度，从0.1改为0.05
                 if not self.is_playing or self.force_stop: return
                 move_x = int(right_x * 15)  # 增加灵敏度
                 move_y = int(right_y * 15)
@@ -1264,8 +1264,8 @@ class GameControllerRecorder:
                 # 更新当前按下的按键状态
                 self.pressed_keys = current_target_keys.copy()
                 
-                # 线程休眠，控制发送频率（60Hz，约16.67ms）
-                time.sleep(0.016)
+                # 线程休眠，控制发送频率（120Hz，约8.33ms，提高响应速度）
+                time.sleep(0.008)
                 
             except Exception as e:
                 print(f"移动控制线程错误: {e}")
@@ -1319,8 +1319,13 @@ class GameControllerRecorder:
         """更新移动目标按键（线程安全）"""
         new_target_keys = set()
         
-        # 增加摇杆死区，忽略轻微的偏移
-        deadzone = 0.2  # 死区阈值
+        # 减小摇杆死区，提高灵敏度
+        deadzone = 0.05  # 减小死区阈值，从0.2改为0.05
+        
+        # 计算摇杆强度（用于调试）
+        stick_magnitude = (left_x**2 + left_y**2)**0.5
+        if stick_magnitude > deadzone:
+            print(f"摇杆强度: {stick_magnitude:.2f}, X: {left_x:.2f}, Y: {left_y:.2f}")
         
         # 根据摇杆位置确定需要按下的按键
         if left_y < -deadzone:  # 前进
