@@ -13,9 +13,10 @@
 - 依赖见 requirements.txt。
 
 ## 用法
-1. 安装依赖：`pip install -r requirements.txt`
-2. 运行程序：`python main.py`
-3. 按 F9 开始/暂停/继续录制，F10 回放，F11 停止。
+1. 需安装根目录下的ViGEmBus_1.22.0_x64_x86_arm64.exe
+2. 安装依赖：`pip install -r requirements.txt`
+3. 运行程序：`python main.py`
+4. 按 F9 开始/暂停/继续录制，F10 回放，F11 停止。
 
 ## 注意事项
 - 需在 Windows 系统下运行。
