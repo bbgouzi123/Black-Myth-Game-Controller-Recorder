@@ -1074,6 +1074,15 @@ class GameControllerRecorder:
                 for btn_id, btn_info in self.controller_config['button_mapping'].items():
                     button_mapping[int(btn_id)] = btn_info.get('key', btn_info.get('name', ''))
             
+            # 检查RB按钮状态（疾奔/Shift键）
+            rb_pressed = False
+            for i, button in enumerate(buttons):
+                if button and i in button_mapping:
+                    key = button_mapping[i]
+                    if key == 'SHIFT':
+                        rb_pressed = True
+                        break
+            
             # 处理按钮 - 黑神话游戏按键映射
             for i, button in enumerate(buttons):
                 # 每个按钮操作前都检查停止状态
@@ -1123,13 +1132,10 @@ class GameControllerRecorder:
                         if not self.is_playing or self.force_stop: return
                         win32api.keybd_event(ord('R'), 0, win32con.KEYEVENTF_KEYUP, 0)
                     
-                    # RB按钮 - 疾奔 (Shift键)
+                    # RB按钮 - 疾奔 (Shift键) - 现在由移动控制线程处理
                     elif key == 'SHIFT':
-                        if not self.is_playing or self.force_stop: return
-                        win32api.keybd_event(win32con.VK_SHIFT, 0, 0, 0)
-                        self.non_blocking_sleep(0.05)
-                        if not self.is_playing or self.force_stop: return
-                        win32api.keybd_event(win32con.VK_SHIFT, 0, win32con.KEYEVENTF_KEYUP, 0)
+                        # RB按钮状态已在上面的循环中检测，这里不需要额外处理
+                        pass
                     
                     # BACK按钮 - 菜单 (ESC键)
                     elif key == 'ESC':
@@ -1171,8 +1177,8 @@ class GameControllerRecorder:
                 if not self.movement_running:
                     self.start_movement_thread()
                 
-                # 更新移动目标按键（线程安全）
-                self.update_movement_target(left_x, left_y)
+                # 更新移动目标按键（线程安全），包含RB加速状态
+                self.update_movement_target(left_x, left_y, rb_pressed)
             
             # 处理右摇杆 (视角控制 - 鼠标移动)
             if abs(right_x) > 0.1 or abs(right_y) > 0.1:
@@ -1282,6 +1288,9 @@ class GameControllerRecorder:
             elif key == 'D':
                 win32api.keybd_event(ord('D'), 0, 0, 0)
                 print(f"按下按键: {key} - 右移")
+            elif key == 'SHIFT':
+                win32api.keybd_event(win32con.VK_SHIFT, 0, 0, 0)
+                print(f"按下按键: {key} - 疾奔加速")
         except Exception as e:
             print(f"按下按键失败 {key}: {e}")
     
@@ -1300,10 +1309,13 @@ class GameControllerRecorder:
             elif key == 'D':
                 win32api.keybd_event(ord('D'), 0, win32con.KEYEVENTF_KEYUP, 0)
                 print(f"释放按键: {key}")
+            elif key == 'SHIFT':
+                win32api.keybd_event(win32con.VK_SHIFT, 0, win32con.KEYEVENTF_KEYUP, 0)
+                print(f"释放按键: {key} - 停止疾奔")
         except Exception as e:
             print(f"释放按键失败 {key}: {e}")
     
-    def update_movement_target(self, left_x, left_y):
+    def update_movement_target(self, left_x, left_y, rb_pressed):
         """更新移动目标按键（线程安全）"""
         new_target_keys = set()
         
@@ -1324,6 +1336,11 @@ class GameControllerRecorder:
         elif left_x > deadzone:  # 右移
             new_target_keys.add('D')
             print(f"摇杆向右 (X={left_x:.2f}) -> 按下D键")
+        
+        # 如果疾奔/Shift键按下，则添加Shift键
+        if rb_pressed:
+            new_target_keys.add('SHIFT')
+            print("疾奔/Shift键按下，添加SHIFT键")
         
         # 线程安全地更新目标按键
         with self.movement_lock:
