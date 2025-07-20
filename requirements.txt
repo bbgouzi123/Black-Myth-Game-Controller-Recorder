@@ -1,5 +1,5 @@
-pygame
+PyQt5
 pywin32
-keyboard
-pynput
-psutil
+inputs
+psutil 
+vgamepad 
