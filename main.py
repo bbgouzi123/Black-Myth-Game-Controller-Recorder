@@ -24,7 +24,6 @@ import win32gui
 from inputs import get_gamepad
 import vgamepad
 import traceback
-import pyvjoy
 
 RECORDINGS_DIR = 'recordings'
 if not os.path.exists(RECORDINGS_DIR):
@@ -170,7 +169,7 @@ class MainWindow(QWidget):
         self.record_start_time = None
         self.replay_start_time = None
         self._drag_pos = None
-        self.ps4_gamepad = vgamepad.VDS4Gamepad()  # 虚拟PS4手柄
+
         self.setWindowTitle('黑神话手柄录制器')
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -583,48 +582,33 @@ class MainWindow(QWidget):
             dpad = 6  # DOWN_RIGHT
         print(f'DPAD: {dpad}, HAT0X: {hat_x}, HAT0Y: {hat_y}')  # 调试输出
         gamepad._dpad_direction = dpad
-        # 兼容性增强：同步用左摇杆推送D-Pad方向
+        # D-Pad 方向只发送键盘，不发送手柄数据
         if dpad == 1:  # UP
-            gamepad.left_joystick(x_value=0, y_value=-32768)
-        elif dpad == 3:  # DOWN - 同时发送 G 键触发筋斗云
-            gamepad.left_joystick(x_value=0, y_value=32767)
-            # 发送 G 键触发筋斗云动作
-            try:
-                win32api.keybd_event(71, 0, 0, 0)  # 按下 G 键
-                time.sleep(0.05)  # 短暂延迟
-                win32api.keybd_event(71, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放 G 键
-            except Exception as e:
-                print(f"发送 G 键失败: {e}")
+            send_key(88)  # X
+        elif dpad == 3:  # DOWN
+            send_key(71)  # G
         elif dpad == 4:  # LEFT
-            gamepad.left_joystick(x_value=-32768, y_value=0)
+            send_key(90)  # Z
         elif dpad == 2:  # RIGHT
-            gamepad.left_joystick(x_value=32767, y_value=0)
+            send_key(67)  # C
         elif dpad == 8:  # UP_LEFT
-            gamepad.left_joystick(x_value=-32768, y_value=-32768)
+            send_key(88)  # X
+            send_key(90)  # Z
         elif dpad == 5:  # UP_RIGHT
-            gamepad.left_joystick(x_value=32767, y_value=-32768)
+            send_key(88)  # X
+            send_key(67)  # C
         elif dpad == 7:  # DOWN_LEFT
-            gamepad.left_joystick(x_value=-32768, y_value=32767)
+            send_key(71)  # G
+            send_key(90)  # Z
         elif dpad == 6:  # DOWN_RIGHT
-            gamepad.left_joystick(x_value=32767, y_value=32767)
+            send_key(71)  # G
+            send_key(67)  # C
         else:
             # 如果没有 D-Pad 输入，使用正常的摇杆值
             lx = info.get('ABS_X', 0)
             ly = info.get('ABS_Y', 0)
             gamepad.left_joystick(x_value=lx, y_value=ly)
-        # 新增：同步推送D-Pad到PS4手柄
-        self.ps4_gamepad.reset()
-        self.ps4_gamepad._dpad_direction = dpad
-        self.ps4_gamepad.update()
-        
-        # 如果 D-Pad 下键，也通过 PS4 手柄发送 G 键
-        if dpad == 3:  # DOWN
-            try:
-                win32api.keybd_event(71, 0, 0, 0)  # 按下 G 键
-                time.sleep(0.05)  # 短暂延迟
-                win32api.keybd_event(71, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放 G 键
-            except Exception as e:
-                print(f"PS4 手柄发送 G 键失败: {e}")
+
         # 摇杆 - 只有在没有 D-Pad 输入时才使用正常摇杆值
         if dpad == 0:  # 没有 D-Pad 输入时
             lx = info.get('ABS_X', 0)
@@ -639,7 +623,7 @@ class MainWindow(QWidget):
         rt = info.get('ABS_RZ', 0)
         gamepad.left_trigger(value=lt)
         gamepad.right_trigger(value=rt)
-        send_dpad_with_vjoy(hat_x, hat_y)
+
 
     def save_error_log(self, detail):
         filename = datetime.now().strftime('%Y-%m-%d-%H%M%S') + '.log'
@@ -673,31 +657,13 @@ class MainWindow(QWidget):
         y = screen.height() - self.height() - 20
         self.move(x, y)
 
-vjoy = pyvjoy.VJoyDevice(1)  # 1号虚拟手柄
-
-def send_dpad_with_vjoy(hat_x, hat_y):
-    # vJoy POV hat: -1=中立, 0=上, 1=右, 2=下, 3=左, 4=右上, 5=右下, 6=左下, 7=左上
-    pov = -1
-    if hat_x == 0 and hat_y == -1:
-        pov = 0  # UP
-    elif hat_x == 1 and hat_y == 0:
-        pov = 1  # RIGHT
-    elif hat_x == 0 and hat_y == 1:
-        pov = 2  # DOWN
-    elif hat_x == -1 and hat_y == 0:
-        pov = 3  # LEFT
-    elif hat_x == 1 and hat_y == -1:
-        pov = 4  # UP-RIGHT
-    elif hat_x == 1 and hat_y == 1:
-        pov = 5  # DOWN-RIGHT
-    elif hat_x == -1 and hat_y == 1:
-        pov = 6  # DOWN-LEFT
-    elif hat_x == -1 and hat_y == -1:
-        pov = 7  # UP-LEFT
+def send_key(key_code):
     try:
-        vjoy.set_disc_pov(0, pov)
+        win32api.keybd_event(key_code, 0, 0, 0)
+        time.sleep(0.05)
+        win32api.keybd_event(key_code, 0, win32con.KEYEVENTF_KEYUP, 0)
     except Exception as e:
-        print(f"[VJOY ERROR] {e}")
+        print(f"发送键盘按键失败: {e}")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
