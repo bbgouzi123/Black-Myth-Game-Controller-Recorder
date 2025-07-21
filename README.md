@@ -20,4 +20,11 @@
 ## 注意事项
 - 需在 Windows 系统下运行。
 - 手柄需连接电脑。
-- 回放功能需确保《黑神话：悟空》游戏窗口已打开并处于激活状态。 
+- 回放功能需确保《黑神话：悟空》游戏窗口已打开并处于激活状态。
+
+## 截图
+<img width="2026" height="1205" alt="image" src="https://github.com/user-attachments/assets/437cc8e1-e783-4a55-9d61-d102b04c1c03" />
+<img width="1726" height="1177" alt="image" src="https://github.com/user-attachments/assets/fc112dd6-c3c0-4f3f-8940-fa9600270433" />
+<img width="2451" height="1182" alt="image" src="https://github.com/user-attachments/assets/e2e502bd-251a-490a-807f-e3c195bacae3" />
+<img width="1914" height="1045" alt="image" src="https://github.com/user-attachments/assets/033e1597-8d66-4e3e-8320-c30b5f966e18" />
+
