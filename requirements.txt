@@ -1,6 +1,0 @@
-PyQt5
-pywin32
-inputs
-psutil 
-vgamepad 
-pyvjoy
